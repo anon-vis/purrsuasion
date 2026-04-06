@@ -1,0 +1,52 @@
+{
+  "name": "opposite-orbit",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "test": "vitest",
+    "migrate:make": "knex --knexfile ./knexfile.mjs migrate:make",
+    "migrate:latest": "knex --knexfile ./knexfile.mjs migrate:latest",
+    "migrate:rollback": "knex --knexfile ./knexfile.mjs migrate:rollback",
+    "seed:make": "knex --knexfile ./knexfile.mjs seed:make",
+    "seed:run": "knex --knexfile ./knexfile.mjs seed:run",
+    "reset": "pnpm migrate:rollback && pnpm migrate:latest && pnpm seed:run",
+    "setup": "pnpm migrate:latest && pnpm seed:run"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.5.0",
+    "@codemirror/autocomplete": "^6.19.1",
+    "@codemirror/commands": "^6.8.1",
+    "@codemirror/lang-markdown": "^6.3.4",
+    "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.2",
+    "@tailwindcss/vite": "^4.1.12",
+    "astro": "^5.15.3",
+    "bcryptjs": "^3.0.2",
+    "better-sqlite3": "^12.2.0",
+    "codemirror": "^6.0.2",
+    "daisyui": "^5.1.6",
+    "jose": "^6.1.0",
+    "lodash": "^4.17.21",
+    "neverthrow": "^8.2.0",
+    "papaparse": "^5.5.3",
+    "pyodide": "^0.28.2",
+    "tailwindcss": "^4.1.12",
+    "uuid": "^11.1.0",
+    "vega-embed": "^7.0.2",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@flydotio/dockerfile": "^0.7.10",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/codemirror": "^5.60.16",
+    "@types/lodash": "^4.17.20",
+    "@types/papaparse": "^5.3.16",
+    "knex": "^3.1.0",
+    "vitest": "^4.0.6"
+  }
+}

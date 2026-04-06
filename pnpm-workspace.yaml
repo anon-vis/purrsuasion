@@ -1,0 +1,9 @@
+packages:
+- '.'
+ignoredBuiltDependencies:
+  - better-sqlite3
+  - esbuild
+  - sharp
+
+onlyBuiltDependencies:
+  - bcrypt
