@@ -1,12 +1,6 @@
-# Purrsuasion
+# Persuasion
 
-This anonymized repo contains code for the data-communication game discussed in the VIS 2026 submission: _Investigating Ethical Data Communication with Purrsuasion: An Educational Game about Negotiated Data Disclosure_.
-
-# Game Setup Guide
-
-This guide covers what you need to set up and run a game session.
-
----
+# Setup Guide
 
 ## Table of Contents
 
@@ -28,11 +22,15 @@ This guide covers what you need to set up and run a game session.
 ### Requirements
 
 - **Node.js** v20 or later
-- Package manager (`npm`, `pnpm` etc.)
-    - We use `pnpm`
-- A terminal and a browser
+- Package manager of choice (`npm`, `pnpm` etc.)
+  - We use `pnpm` in this guide
+- SQLite (database)
+  - macOS: SQLite is generally preinstalled, but if it isn't for some reason, then we recommend installing it via Homebrew by running `brew install sqlite`.
+  - Windows: Go to the [SQLite download page](https://www.sqlite.org/download.html) and download the **Precompiled Binaries for Windows** — the file named `sqlite-tools-win-x64-*.zip`.
 
 ### Install dependencies
+
+Once you clone this repo, navigate to the project root and run:
 
 ```bash
 pnpm install
@@ -47,7 +45,7 @@ JWT_SECRET=<a long random hex string>
 DATABASE_URL=./src/db/purrsuasion.db
 ```
 
-To generate a suitable `JWT_SECRET`:
+To generate a suitable `JWT_SECRET` (which is used for basic authentication system):
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
@@ -55,13 +53,13 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ### Initialize the database
 
-Creates all tables and seeds the default prompts and admin account:
+Run this command to creates all tables, seed, the default prompts and admin account:
 
 ```bash
 pnpm setup
 ```
 
-> To wipe everything and start fresh: `pnpm reset`. This destroys all data — never run it during an active session.
+> Note: if you ever need to wipe everything and start fresh: `pnpm reset`. This destroys all data — never run it during an active session.
 
 ### Start the server
 
@@ -101,7 +99,7 @@ carol,staple
 ```
 
 - Each row creates one student account. Usernames must be unique across the entire system.
-- Passwords are stored as secure hashes — students use them to log in.
+- Passwords are stored as secure hashes in the database, but aren't used by default. The default configuration lets user log in simply by using their username.
 - All imported students are automatically marked **active** and **consented**. Adjust before starting if needed (see section 3).
 
 Click **confirm**. The class is created in the `inactive` state. No game has started yet.
@@ -129,7 +127,7 @@ You will see a table of enrolled students with two toggleable flags:
 
 ## 4. Configuring Puzzles
 
-The game ships with three puzzle scenarios. All puzzle content lives in a single file:
+The game ships with three show-puzzles. All puzzle content lives in a single file:
 
 ```
 src/config/puzzles.json
@@ -168,14 +166,6 @@ pnpm seed:run
 
 Edit the `defaultNotebook` array inside the relevant puzzle entry in `src/config/puzzles.json`. Each entry has a `cell_type` (`"code"` or `"raw"`) and a `source` array of strings (one string per line). Changes only affect notebooks created after the next class start — existing notebooks are not updated.
 
-### Adding a new puzzle
-
-1. Add a new entry to the `"puzzles"` array in `src/config/puzzles.json` with all four fields (`name`, `prompts`, `signals`, `defaultNotebook`).
-2. Place the corresponding dataset file(s) in `public/data/`.
-3. Run `pnpm seed:run` to insert the new prompts into the database.
-
-The puzzle will automatically appear in the rubric dropdown and be available for assignment when the next class starts.
-
 ---
 
 ## 5. Starting the Class
@@ -203,7 +193,7 @@ The page shows a table per group with:
 - **Current round** number
 - Each student's **username**, **role** (receiver or sender), and **consent status**
 
-Reload the page to see updated state — live refresh will be included in future releases.
+Reload the page to see updated state. Live refresh is in development will be included in future releases.
 
 ---
 
@@ -281,7 +271,7 @@ Export structure:
 
 ---
 
-## 10. Known Gotchas
+## 9. Known Gotchas
 
 ### Student count must be divisible by 3
 
@@ -304,6 +294,43 @@ Which puzzle each group plays in each round is randomly assigned at class start.
 ### Sessions expire after 3 hours
 
 Student sessions time out after 3 hours. Students logged in longer than that will be redirected to the login page.
+
+## 10. Deployment
+
+Purrsuasion is designed to be self-hosted on a single machine for the duration of a class session. While we did not use any external providers for our instance, future documentation will contain guidance on how to host on various cloud provider platforms.
+
+### Database
+
+The app uses **SQLite** via `better-sqlite3`. The database is a single file at the path specified by `DATABASE_URL` in your `.env`, that will be created once the app runs.
+
+### Running in production
+
+Build the app before deploying:
+
+```bash
+pnpm build
+pnpm start
+```
+
+`pnpm dev` runs a development server with hot reloading and is not suitable for classroom use. `pnpm start` runs the compiled output, which is faster and more stable.
+
+Set `NODE_ENV=production` in your `.env` to disable development error overlays:
+
+```env
+NODE_ENV=production
+JWT_SECRET=<your secret>
+DATABASE_URL=./src/db/purrsuasion.db
+```
+
+### Running on a local network
+
+The most straightforward deployment for a single classroom session is to run the app on a laptop or desktop connected to the same network as your students, and have students connect by IP address.
+
+Once you run `pnpm start` the terminal output should print the network URL where the app can be accessed. It will be in the form: `http://<your_ip>:4321`.
+
+### Running on a server
+
+WIP
 
 ---
 
@@ -397,13 +424,3 @@ These control real-time event reliability. A shorter interval increases server l
 Re-seeding (`pnpm seed:run`) resets the admin password to whatever is in this file. While there is basic password security built into the platform, we do not enable this by default since we expect the game to be run in the context of one classroom session.
 
 ---
-
-### 7. Server Port
-
-**Where it lives:** `astro.config.mjs`
-
-```javascript
-server: { host: "0.0.0.0", port: 4321 }
-```
-
-Change the `port` value and restart. **Suggested improvement:** Read from `process.env.PORT` so it can be set at launch without touching source.
