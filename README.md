@@ -14,8 +14,8 @@ This anonymized repo contains code for the data-communication game discussed in 
 6. [Monitoring a Session in Progress](#6-monitoring-a-session-in-progress)
 7. [Using the Rubric Interface](#7-using-the-rubric-interface)
 8. [Exporting Gameplay Data](#8-exporting-gameplay-data)
-9. [Ending a Class](#9-ending-a-class)
-10. [Known Gotchas](#10-known-gotchas)
+9. [Known Gotchas](#9-known-gotchas)
+10. [Deployment](#10-deployment)
 
 ---
 
@@ -76,8 +76,6 @@ The app runs at `http://localhost:4321`.
 | Username | Password |
 | -------- | -------- |
 | `admin`  | `admin`  |
-
-Change this before running with real students (see [CONFIGURATION.md](CONFIGURATION.md) §9).
 
 ---
 
