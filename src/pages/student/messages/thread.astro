@@ -1,0 +1,55 @@
+---
+import { roundService } from "../../../lib/services";
+import MailPreview from "../../../components/messages/MailPreview.astro";
+import Mail from "../../../components/messages/Mail.astro";
+import { assertStudent } from "../../../lib/core/utils";
+
+assertStudent(Astro.locals);
+
+export const prerender = false;
+
+const { id, roundId } = Astro.locals;
+
+const from = Astro.url.searchParams.get("from")!;
+
+const inboxResult = roundService.getInbox(id, roundId);
+const threadResult = roundService.getThread(id, +from, roundId);
+
+if (threadResult.isErr()) {
+  return Astro.redirect("/error");
+}
+
+if (inboxResult.isErr()) {
+  return Astro.redirect("/error");
+}
+
+const thread = threadResult.value;
+const inbox = inboxResult.value.inbox;
+---
+
+{
+  thread.map((m, i) => (
+    <Mail
+      message={m}
+      threadSize={thread.length}
+      isMostRecentMessageInThread={thread.length - 1 === i}
+    />
+  ))
+}
+
+<ul id="msg-list" hx-swap-oob="true" class="flex gap-4">
+  {
+    inbox.map((m, i) => (
+      <MailPreview message={m} isNew={false} isSelected={m.user_id === +from} />
+    ))
+  }
+</ul>
+
+<input
+  id="selected-thread"
+  class="visually-hidden"
+  type="text"
+  hx-swap-oob="true"
+  name="selected"
+  value={from}
+/>

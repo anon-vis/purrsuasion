@@ -1,0 +1,385 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Array";
+  src: url("../assets/fonts/Array-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Array";
+  src: url("../assets/fonts/Array-Semibold.woff2") format("woff2");
+}
+
+@theme {
+  --color-red: #d75a44;
+  --color-black: #433455;
+  --color-blue: #bdeffd;
+  --color-pink: #fedfe5;
+}
+@plugin "daisyui" {
+  themes: lofi --default;
+}
+
+/* RESET */
+
+/* Box sizing rules */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Prevent font size inflation */
+html {
+  -moz-text-size-adjust: none;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+}
+
+/* Remove default margin in favour of better control in authored CSS */
+body,
+h1,
+h2,
+h3,
+h4,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin-block-end: 0;
+}
+
+/* Remove list styles on ul, ol elements with a list role, which suggests default styling will be removed */
+ul[role="list"],
+ol[role="list"] {
+  list-style: none;
+}
+
+/* Set core body defaults */
+body {
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* Set shorter line heights on headings and interactive elements */
+h1,
+h2,
+h3,
+h4,
+button,
+input,
+label {
+  line-height: 1.1;
+}
+
+/* Balance text wrapping on headings */
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
+/* A elements that don't have a class get default styles */
+a:not([class]) {
+  text-decoration-skip-ink: auto;
+  color: currentColor;
+}
+
+/* Make images easier to work with */
+img,
+picture {
+  max-width: 100%;
+  display: block;
+}
+
+/* Inherit fonts for inputs and buttons */
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+/* Make sure textareas without a rows attribute are not tiny */
+textarea:not([rows]) {
+  min-height: 10em;
+}
+
+/* Anything that has been anchored to should have extra scroll margin */
+:target {
+  scroll-margin-block: 5ex;
+}
+
+:root {
+  --transition-bounce: 500ms cubic-bezier(0.5, 0.05, 0.2, 1.5);
+  --leading-standard: 1.5;
+
+  /* Spacing scales */
+  --space-3xs: clamp(0.3125rem, 0.2888rem + 0.1149vw, 0.375rem);
+  --space-2xs: clamp(0.5625rem, 0.4914rem + 0.3448vw, 0.75rem);
+  --space-xs: clamp(0.875rem, 0.7802rem + 0.4598vw, 1.125rem);
+  --space-s: clamp(1.125rem, 0.9828rem + 0.6897vw, 1.5rem);
+  --space-m: clamp(1.6875rem, 1.4741rem + 1.0345vw, 2.25rem);
+  --space-l: clamp(2.25rem, 1.9655rem + 1.3793vw, 3rem);
+  --space-xl: clamp(3.375rem, 2.9483rem + 2.069vw, 4.5rem);
+  --space-2xl: clamp(4.5rem, 3.931rem + 2.7586vw, 6rem);
+  --space-3xl: clamp(6.75rem, 5.8966rem + 4.1379vw, 9rem);
+  --space-4xl: clamp(9rem, 7.8621rem + 5.5172vw, 12rem);
+
+  /* One-up pairs */
+  --space-3xs-2xs: clamp(0.3125rem, 0.1466rem + 0.8046vw, 0.75rem);
+  --space-2xs-xs: clamp(0.5625rem, 0.3491rem + 1.0345vw, 1.125rem);
+  --space-xs-s: clamp(0.875rem, 0.6379rem + 1.1494vw, 1.5rem);
+  --space-s-m: clamp(1.125rem, 0.6983rem + 2.069vw, 2.25rem);
+  --space-m-l: clamp(1.6875rem, 1.1897rem + 2.4138vw, 3rem);
+  --space-l-xl: clamp(2.25rem, 1.3966rem + 4.1379vw, 4.5rem);
+  --space-xl-2xl: clamp(3.375rem, 2.3793rem + 4.8276vw, 6rem);
+  --space-2xl-3xl: clamp(4.5rem, 2.7931rem + 8.2759vw, 9rem);
+  --space-3xl-4xl: clamp(6.75rem, 4.7586rem + 9.6552vw, 12rem);
+
+  /* Custom pairs */
+  --space-s-l: clamp(1.125rem, 0.4138rem + 3.4483vw, 3rem);
+  --space-s-xl: clamp(1.125rem, -0.1552rem + 6.2069vw, 4.5rem);
+
+  /* Font sizing */
+  --step--1: clamp(0.9574rem, 0.8654rem + 0.4461vw, 1.2rem);
+  --step-0: clamp(1.125rem, 0.9828rem + 0.6897vw, 1.5rem);
+  --step-1: clamp(1.3219rem, 1.1121rem + 1.0172vw, 1.875rem);
+  --step-2: clamp(1.5532rem, 1.2533rem + 1.4539vw, 2.3438rem);
+  --step-3: clamp(1.825rem, 1.406rem + 2.0316vw, 2.9297rem);
+  --step-4: clamp(2.1444rem, 1.5687rem + 2.7912vw, 3.6621rem);
+  --step-5: clamp(2.5197rem, 1.739rem + 3.7848vw, 4.5776rem);
+  --step-6: clamp(2.9606rem, 1.9132rem + 5.0785vw, 5.722rem);
+  --step-7: clamp(3.4787rem, 2.0852rem + 6.7565vw, 7.1526rem);
+
+  /* --font-base: Iosevka, sans-serif; */
+  --font-base: "Array", sans-serif;
+
+  --spring-easing: linear(
+    0,
+    0.009,
+    0.035 2.1%,
+    0.141,
+    0.281 6.7%,
+    0.723 12.9%,
+    0.938 16.7%,
+    1.017,
+    1.077,
+    1.121,
+    1.149 24.3%,
+    1.159,
+    1.163,
+    1.161,
+    1.154 29.9%,
+    1.129 32.8%,
+    1.051 39.6%,
+    1.017 43.1%,
+    0.991,
+    0.977 51%,
+    0.974 53.8%,
+    0.975 57.1%,
+    0.997 69.8%,
+    1.003 76.9%,
+    1.004 83.8%,
+    1
+  );
+  --spring-duration: 1.333s;
+}
+
+body {
+  background: var(--color-light);
+  color: var(--color-black);
+  font-size: 0.9rem !important;
+  font-family: var(--font-base);
+  font-weight: 400;
+  line-height: var(--leading-standard);
+}
+
+button:not(:disabled):not([class]) {
+  color: var(--color-black);
+}
+
+button:disabled {
+  color: #838585;
+}
+
+h2 {
+  font-family: "Array", sans-serif;
+  font-weight: 700;
+  font-size: var(--step-2);
+}
+
+h3 {
+  font-family: "Array", sans-serif;
+  font-weight: 700;
+  font-size: var(--step-1);
+}
+
+/* COMPOSITIONS */
+
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gutter, var(--space-s-m));
+  justify-content: var(--cluster-horizontal-alignment, flex-start);
+  align-items: var(--cluster-vertical-alignment, center);
+}
+
+.flow > * + * {
+  margin-top: var(--flow-space, 1rem);
+}
+
+.custom-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    var(--grid-placement, auto-fill),
+    minmax(var(--grid-min-item-size, 16rem), 1fr)
+  );
+  gap: var(--gutter, 0);
+}
+
+/* A split 50/50 layout */
+.custom-grid[data-layout="halves"] {
+  --grid-placement: auto-fit;
+  --grid-min-item-size: clamp(16rem, 50vw, 33rem);
+}
+
+/* Three column grid layout */
+.custom-grid[data-layout="thirds"] {
+  --grid-placement: auto-fit;
+  --grid-min-item-size: clamp(16rem, 33%, 20rem);
+}
+
+.repel {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: var(--repel-vertical-alignment, center);
+  gap: var(--gutter, var(--space-s-m));
+}
+
+.repel[data-nowrap] {
+  flex-wrap: nowrap;
+}
+
+.sidebar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gutter, var(--space-s));
+}
+
+.sidebar > :first-child {
+  flex-basis: var(--sidebar-target-width, 20rem);
+  flex-grow: 1;
+}
+
+.sidebar > :last-child {
+  flex-basis: 0;
+  flex-grow: 999;
+  min-width: var(--sidebar-content-min-width, 40%);
+}
+
+.switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gutter, var(--space-s-l));
+  align-items: var(--switcher-vertical-alignment, flex-start);
+}
+
+.switcher > * {
+  flex-grow: 1;
+  flex-basis: calc(
+    (var(--switcher-target-container-width, 40rem) - 100%) * 999
+  );
+}
+
+/* Max 2 items,
+so anything greater than 2 is full width */
+.switcher > :nth-child(n + 3) {
+  flex-basis: 100%;
+}
+
+.wrapper {
+  margin-inline: auto;
+  max-width: clamp(16rem, var(--wrapper-max-width, 100vw), 80rem);
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+  position: relative;
+}
+
+.prose {
+  --flow-space: var(--space-m);
+}
+
+/* UTILITIES */
+
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.region {
+  padding-block: var(--region-space, var(--space-xl-2xl));
+}
+
+.visually-hidden {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 0;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+  white-space: nowrap;
+}
+
+.full-bleed {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+}
+
+.scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: var(--thumb-color, var(--color-blue)) var(--color-white);
+}
+
+dialog {
+  position: relative !important;
+}
+
+dialog::backdrop {
+  background: transparent;
+  background-color: transparent;
+  backdrop-filter: none;
+  opacity: 1;
+}
+
+dialog:-internal-dialog-in-top-layer {
+  position: relative;
+}
+
+.window {
+  opacity: 0;
+  transform: scale(1, 0);
+  animation: modal-open 1.3s var(--spring-easing) forwards;
+  transform-origin: center;
+}
+
+@keyframes modal-open {
+  to {
+    opacity: 1;
+    transform: scale(1, 1);
+  }
+}
+
+.cm-line,
+.cm-gutterElement,
+.cm-tooltip {
+  font-size: 0.75rem !important;
+}
+
+.cm-tooltip {
+  z-index: 9999;
+}

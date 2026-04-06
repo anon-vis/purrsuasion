@@ -1,0 +1,44 @@
+---
+import z from "zod";
+import { assertStudent } from "../../lib/core/utils";
+import { roundService } from "../../lib/services";
+
+assertStudent(Astro.locals);
+
+export const partial = true;
+export const prerender = false;
+
+if (Astro.request.method !== "POST") {
+  return new Response("Method not allowed", { status: 405 });
+}
+
+const outcomeSchema = z.object({
+  winner_user_id: z.coerce.number(),
+  justification: z.string(),
+  round_id: z.coerce.number(),
+});
+
+const formData = await Astro.request.formData();
+
+const rawData = {
+  round_id: Astro.locals.roundId,
+  winner_user_id: formData.get("winner_user_id"),
+  justification: formData.get("justification"),
+};
+
+const parseResult = outcomeSchema.safeParse(rawData);
+
+if (!parseResult.success) {
+  console.error("Form validation error:", parseResult.error);
+  return new Response("Invalid form data", { status: 400 });
+}
+
+const data = parseResult.data;
+
+roundService.concludeRound(
+  data.round_id,
+  Astro.locals.id,
+  data.winner_user_id,
+  data.justification
+);
+---

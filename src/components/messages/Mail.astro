@@ -1,0 +1,79 @@
+---
+import type { Message } from "../../lib/models";
+import { bufferToDataURL } from "../../lib/core/utils";
+import { assertStudent } from "../../lib/core/utils";
+
+assertStudent(Astro.locals);
+
+interface Props {
+  message: Message;
+  threadSize: number;
+  isMostRecentMessageInThread: boolean;
+}
+
+const { id: userId, groupMembers, isReceiver } = Astro.locals;
+const { message, isMostRecentMessageInThread, threadSize } = Astro.props;
+// Reply button only appears on the most recent message in the thread for the user if they did not send it AND if thread size is less than 4
+const showReplyButton =
+  userId === message.recipient_id &&
+  isMostRecentMessageInThread &&
+  threadSize < 4;
+
+const buttonStyle = isReceiver
+  ? "hover:bg-pink border-pink"
+  : "hover:bg-blue border-blue";
+---
+
+<div class="border-b border-gray-200 p-[var(--space-s)] bg-[#FFFFF9]/50">
+  <div class="flow">
+    <div class="repel">
+      <div class="flex flex-col gap-1 font-medium">
+        <div>
+          {
+            message.user_id === userId
+              ? "You"
+              : groupMembers.find((u) => u.id === message.user_id)?.username
+          }
+        </div>
+        <div>
+          To: {
+            groupMembers.find((u) => u.id === message.recipient_id)?.username
+          }
+        </div>
+        <div>{message.subject}</div>
+      </div>
+
+      <div class="flex flex-col">
+        {
+          showReplyButton && (
+            <button
+              id="reply-btn"
+              class={`rounded-none border-3 text-[#838585] bg-white btn-sm btn ${buttonStyle}`}
+              hx-swap="beforeend"
+              hx-target="#msg-thread"
+              hx-get={`/student/messages/reply?to=${message.user_id}`}
+            >
+              REPLY
+            </button>
+          )
+        }
+        <span>
+          {
+            new Date(message.timestamp).toLocaleTimeString([], {
+              hour: "numeric",
+              minute: "2-digit",
+            })
+          }
+        </span>
+      </div>
+    </div>
+
+    <div>{message.body}</div>
+
+    {
+      message.visualization && (
+        <img src={bufferToDataURL(message.visualization)} alt="Visualization" />
+      )
+    }
+  </div>
+</div>

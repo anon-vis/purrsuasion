@@ -1,0 +1,90 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { classService } from "../../../lib/services";
+import Header from "../../../components/core/Header.astro";
+
+export const prerender = false;
+
+const classes = classService.getClasses();
+---
+
+<AdminLayout>
+  <div class="repel">
+    <h2>Classes</h2>
+    <button class="btn" onclick="add_class_modal.showModal()">add class</button>
+  </div>
+
+  <div id="list">
+    {
+      classes.isOk() && classes.value.length > 0 ? (
+        classes.value.map((c) => (
+          <a class="link" href={`/admin/classes/${c.id}`}>
+            {c.name}
+          </a>
+        ))
+      ) : (
+        <div>No classes added.</div>
+      )
+    }
+
+    {
+      classes.isErr() && (
+        <div>There was an error fetching classes: {classes.error.type}</div>
+      )
+    }
+  </div>
+</AdminLayout>
+
+<dialog id="add_class_modal" class="modal">
+  <div class="modal-box w-full flow">
+    <div class="font-bold text-(length:--step-1)">Add class</div>
+
+    <form
+      class="flow"
+      hx-post="/admin/classes/add"
+      hx-target="#list"
+      hx-encoding="multipart/form-data"
+      hx-swap="outerHTML"
+    >
+      <label class="input w-full">
+        <span class="label"> Name </span>
+        <input
+          name="name"
+          type="text"
+          class="grow"
+          placeholder="Ex: CMSC 12345"
+          autocomplete="off"
+        />
+      </label>
+      <label class="input w-full">
+        <span class="label"> Description </span>
+        <input
+          name="description"
+          type="text"
+          class="grow"
+          placeholder="Ex: Fall 2026"
+          autocomplete="off"
+        />
+      </label>
+
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">Student data</legend>
+        <input name="students" type="file" class="file-input w-full" />
+        <label class="label"
+          >Upload .csv file with headers: [Username, Password]</label
+        >
+      </fieldset>
+
+      <div class="flex gap-2 justify-end">
+        <button
+          type="submit"
+          class="btn btn-primary"
+          onclick="add_class_modal.close()">confirm</button
+        >
+        <button type="reset" class="btn" onclick="add_class_modal.close()"
+          >cancel</button
+        >
+      </div>
+    </form>
+  </div>
+</dialog>

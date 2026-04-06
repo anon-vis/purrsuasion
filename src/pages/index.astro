@@ -1,0 +1,201 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { roundService, notebookService } from "../lib/services";
+import type { NotebookJSON } from "../lib/models";
+import MeowMail from "../components/messages/MeowMail.astro";
+import Taskbar from "../components/core/Taskbar.astro";
+import WhiskerSign from "../components/judge/WhiskerSign.astro";
+import CatPlot from "../components/notebook/CatPlot.astro";
+
+export const prerender = false;
+
+const userType = Astro.locals.userType;
+
+if (!userType) {
+  return Astro.redirect('/login');
+}
+
+if (userType === "admin") {
+  return Astro.redirect("/admin/classes");
+}
+
+const {
+  id,
+  roundId,
+  roundAssignmentId,
+  isReceiver,
+  groupMembers,
+  roundStarted,
+  prompt,
+  category
+} = Astro.locals;
+
+const gameNotOver = roundId;
+let ableToJudge = false;
+let inbox;
+let notebook;
+
+if (gameNotOver) {
+  const inboxResult = roundService.getInbox(id, roundId);
+  
+  if (inboxResult.isErr()) {
+    console.error("Failed to get messages:", inboxResult.error);
+    return Astro.redirect("/error");
+  }
+  
+  inbox = inboxResult.value;
+  
+  // Get notebook if sender
+  const isSender = userType === "student" && !isReceiver;
+  if (isSender) {
+    const notebookResult =
+      notebookService.getNotebookByRoundAssignment(roundAssignmentId);
+  
+    if (notebookResult.isErr()) {
+      console.error("Failed to get notebook:", notebookResult.error);
+      return Astro.redirect("/error");
+    }
+  
+    notebook = notebookResult.value;
+  }
+  
+  ableToJudge = inbox.inbox.length === groupMembers.length - 1;
+}
+
+---
+
+<Layout>
+  <main id="main">
+    <div
+      style="font-size: var(--step-6);"
+      class={`w-full text-[#E1E1E1]/70 h-screen flex justify-center items-center -z-10 ${isReceiver ? 'bg-[url("../assets/receiver_bg.png")]' : 'bg-[url("../assets/sender_bg.png")]'} absolute`}
+    >
+      {gameNotOver && roundStarted && <div>persuasion</div>}
+    </div>
+
+    <div
+      id="round-win"
+      hx-trigger="sse:round_win"
+      hx-get="/student/round-win"
+      hx-target="#main"
+      hx-swap="outerHTML"
+      class="hidden"
+    >
+    </div>
+
+    <div
+      id="round-loss"
+      hx-trigger="sse:round_loss"
+      hx-get="/student/round-loss"
+      hx-target="#main"
+      hx-swap="outerHTML"
+      class="hidden"
+    >
+    </div>
+
+    <div
+      id="round-complete"
+      hx-trigger="sse:round_complete"
+      hx-get="/student/round-complete"
+      hx-target="#main"
+      hx-swap="outerHTML"
+      class="hidden"
+    >
+    </div>
+
+    {
+      gameNotOver && !roundStarted && (
+        <div
+          id="round-pending-start"
+          hx-trigger="sse:round_start"
+          hx-get="/"
+          hx-swap="outerHTML"
+          hx-target="#main"
+          class="w-full h-screen flex justify-center items-center flex-col gap-8"
+        >
+          <div class="border-4 border-[#c3c3c3] bg-[#fefefe] m-2 overflow-clip w-fit window">
+            <div class={`repel m-1 p-2 ${isReceiver ? 'bg-pink' : 'bg-blue'}`}>
+              <div class="font-bold text-[#838585]">Round pending start...</div>
+              <button
+                hx-post="/api/logout"
+                class="hover:scale-105 font-bold btn border-3 border-l-[#DDDFDD] border-t-[#DDDFDD] border-r-[#838585] border-b-[#838585] bg-[#c3c3c3] text-black btn-xs btn-square rounded-none"
+              >
+                x
+              </button>
+            </div>
+    
+            <div class="m-1 border-4 border-[#E1E1E1] p-10 flow flex items-center flex-col">
+              {isReceiver && (
+                <h2>You are the receiver!</h2>
+
+                <p class="max-w-[70ch] text-lg">{prompt}</p>
+                <button hx-post="/api/start-round" class={`btn border-3 rounded-none btn-lg text-black text-xl bg-white border-pink hover:bg-pink`}>
+                  start round
+                </button>
+              )}
+
+                {!isReceiver && (
+                <h2>You are the sender!</h2>
+
+                <p class="max-w-[70ch] text-lg">{prompt} The round will begin once the receiver starts it.</p>
+                
+              )}
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    {
+      gameNotOver && roundStarted && inbox && (
+        <div class="w-full h-screen grid grid-cols-2 justify-center">
+          <>
+            <div class="col-start-1">
+              <MeowMail
+                inbox={inbox.inbox}
+                hasSentMessages={inbox.hasSentMessages}
+              />
+            </div>
+            <Taskbar ableToJudge={ableToJudge} />
+          </>
+
+          {notebook && (
+            <div class="col-start-2 w-full">
+              <CatPlot notebook={notebook} promptCategory={category} />
+            </div>
+          )}
+          {isReceiver && ableToJudge && <WhiskerSign />}
+        </div>
+      )
+    }
+
+    {
+      !gameNotOver && (
+        <div
+          class="w-full h-screen flex justify-center items-center flex-col gap-8"
+        >
+          <div class="border-4 border-[#c3c3c3] bg-[#fefefe] m-2 overflow-clip w-fit window">
+            <div class={`repel m-1 p-2 bg-black`}>
+              <div class="font-bold text-[#838585]">Thanks for playing</div>
+              <button
+                hx-post="/api/logout"
+                class="hover:scale-105 font-bold btn border-3 border-l-[#DDDFDD] border-t-[#DDDFDD] border-r-[#838585] border-b-[#838585] bg-[#c3c3c3] text-black btn-xs btn-square rounded-none"
+              >
+                x
+              </button>
+            </div>
+    
+            <div class="m-1 border-4 border-[#E1E1E1] p-10 flow flex items-center flex-col">
+             
+                <h2>Game Complete!</h2>
+
+                <p>Thanks for playing the game.</p>
+
+
+            </div>
+          </div>
+        </div>
+      )
+    }
+  </main>
+</Layout>

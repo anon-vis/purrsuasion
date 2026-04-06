@@ -1,0 +1,26 @@
+---
+import type { Message } from "../../lib/models";
+import { bufferToDataURL } from "../../lib/core/utils";
+
+interface Props {
+  messages: (Message & { sender_id: number; round_assignment_id: number })[];
+}
+
+const { messages } = Astro.props;
+---
+
+<ul class="flex flex-col gap-2">
+  {
+    messages.map((m) => (
+      <li class="p-2 border-3 w-full border-black/50">
+        {m.visualization && (
+          <img
+          width="500"
+            src={bufferToDataURL(m.visualization)}
+            alt="Visualization"
+          />
+        )}
+      </li>
+    ))
+  }
+</ul>

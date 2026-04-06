@@ -1,0 +1,60 @@
+---
+import Papa from "papaparse";
+import type { User } from "../../../lib/models";
+import { classService } from "../../../lib/services";
+
+export const prerender = false;
+export const partial = true;
+
+if (Astro.request.method !== "POST") {
+  return Astro.redirect(null, 404);
+}
+
+const formData = await Astro.request.formData();
+const name = formData.get("name") as string;
+const description = formData.get("description") as string;
+const csvFile = formData.get("students") as File;
+const studentData = await csvFile.text();
+
+const parsedStudents = Papa.parse<User>(studentData, {
+  header: true,
+  skipEmptyLines: true,
+  dynamicTyping: true,
+}).data;
+
+classService.addClass({
+  name: name,
+  description: description,
+  students: parsedStudents.map((student) => {
+    return {
+      ...student,
+      user_type: "student",
+      is_active: true,
+      is_consented: true,
+    };
+  }),
+  status: "inactive",
+});
+
+const classes = classService.getClasses();
+---
+
+<div id="list">
+  {
+    classes.isOk() && classes.value.length > 0 ? (
+      classes.value.map((c) => (
+        <a class="link" href={`/admin/classes/${c.id}`}>
+          {c.name}
+        </a>
+      ))
+    ) : (
+      <div>No classes added.</div>
+    )
+  }
+
+  {
+    classes.isErr() && (
+      <div>There was an error fetching classes: {classes.error}</div>
+    )
+  }
+</div>

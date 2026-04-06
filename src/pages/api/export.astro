@@ -1,0 +1,37 @@
+---
+import { classService } from "../../lib/services";
+
+export const prerender = false;
+
+if (Astro.request.method !== "POST") {
+  return new Response(null, { status: 405 });
+}
+
+const body = await Astro.request.json();
+const classId = body.classId;
+
+if (!classId || typeof classId !== "number") {
+  return new Response(JSON.stringify({ error: "Missing classId" }), {
+    status: 400,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+const result = classService.exportGameplayData(classId);
+
+if (result.isErr()) {
+  console.error(result.error);
+  return new Response(JSON.stringify({ error: result.error.message }), {
+    status: 500,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+return new Response(JSON.stringify(result.value, null, 2), {
+  status: 200,
+  headers: {
+    "Content-Type": "application/json",
+    "Content-Disposition": `attachment; filename="gameplay-export-class-${classId}.json"`,
+  },
+});
+---

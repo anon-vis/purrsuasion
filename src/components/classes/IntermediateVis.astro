@@ -1,0 +1,116 @@
+---
+import type { ChartExecution } from "../../lib/models";
+
+interface Props {
+  sender: number;
+  prompt: string;
+  execs: ChartExecution[];
+}
+
+const { execs, sender, prompt } = Astro.props;
+---
+
+<div id="selected-vis"></div>
+
+<ul data-sender={sender} data-prompt={prompt}>
+  {
+    execs.map((e) => {
+      const spec = JSON.parse(e.context).spec;
+      return (
+        <li
+          class="border-3 border-black/50 cursor-pointer p-2"
+          data-snapshot-id={e.snapshot_id}
+          data-cell-id={e.cell_id}
+          hx-target="#sender-snapshots"
+          hx-swap="innerHTML"
+        >
+          <span>Snapshot #{e.snapshot_id}</span>
+          <div class="vega-preview" data-spec={JSON.stringify(spec)} />
+        </li>
+      );
+    })
+  }
+</ul>
+
+<script>
+  import vegaEmbed from "vega-embed";
+
+  type VegaSpec = Record<string, any>;
+
+  function extractMarks(spec: VegaSpec): string[] {
+    const marks = new Set<string>();
+
+    function walk(node: VegaSpec) {
+      if (!node || typeof node !== "object") return;
+
+      if (typeof node.mark === "string") {
+        marks.add(node.mark.toLowerCase());
+      } else if (typeof node.mark === "object" && node.mark?.type) {
+        marks.add(node.mark.type.toLowerCase());
+      }
+
+      for (const key of ["layer", "concat", "hconcat", "vconcat", "spec"]) {
+        if (Array.isArray(node[key])) {
+          node[key].forEach(walk);
+        } else if (node[key]) {
+          walk(node[key]);
+        }
+      }
+    }
+
+    walk(spec);
+    return [...marks];
+  }
+
+  async function initCharts(root: Document | HTMLElement = document) {
+    root.querySelectorAll<HTMLElement>(".vega-preview").forEach(async (el) => {
+      if (el.dataset.initialized) return;
+      el.dataset.initialized = "true";
+
+      const spec = JSON.parse(el.dataset.spec ?? "{}");
+      const li = el.closest<HTMLElement>("li")!;
+      const ul = li.closest<HTMLElement>("ul")!;
+
+      const snapshotId = li.dataset.snapshotId;
+      const cellId = li.dataset.cellId;
+      const marks = extractMarks(spec);
+      const sender = ul.dataset.sender;
+      const prompt = ul.dataset.prompt;
+
+      li.setAttribute(
+        "hx-get",
+        `/admin/rubric/snapshot?snapshot_id=${snapshotId}&cell_id=${cellId}&marks=${marks.join(",")}&sender=${sender}&prompt=${encodeURIComponent(prompt ?? "")}`,
+      );
+
+      //@ts-ignore
+      htmx.process(li);
+
+      const offscreen = document.createElement("div");
+      offscreen.style.cssText =
+        "position:absolute;left:-9999px;visibility:hidden";
+      document.body.appendChild(offscreen);
+
+      try {
+        const result = await vegaEmbed(offscreen, spec, {
+          renderer: "canvas",
+          actions: false,
+        });
+
+        const url = await result.view.toImageURL("png");
+
+        const img = document.createElement("img");
+        img.src = url;
+        el.appendChild(img);
+      } finally {
+        document.body.removeChild(offscreen);
+      }
+    });
+  }
+
+  await initCharts();
+
+  document.addEventListener("htmx:afterSwap", (e) => {
+    const target = (e as CustomEvent).detail.target as HTMLElement;
+    initCharts(target);
+  });
+</script>

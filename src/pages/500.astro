@@ -1,0 +1,9 @@
+---
+interface Props {
+  error: unknown;
+}
+
+const { error } = Astro.props;
+---
+
+<div>An error occurred: {error}</div>

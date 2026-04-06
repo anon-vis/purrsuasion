@@ -1,0 +1,41 @@
+---
+import { notebookService } from "../../../lib/services";
+import type { Cell } from "../../../lib/models";
+
+export const prerender = false;
+
+if (Astro.request.method !== "POST") {
+  return Astro.redirect(null, 404);
+}
+
+type ChangeType = "cell_added" | "cell_deleted" | "cell_reordered" | "save";
+
+const body = await Astro.request.json();
+const { notebookId, cells, changeType } = body as {
+  notebookId: number;
+  cells: Cell[];
+  changeType: ChangeType;
+};
+
+if (!notebookId || !cells || !changeType) {
+  return new Response(JSON.stringify({ error: "Missing required fields" }), {
+    status: 400,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+const result = notebookService.logNotebookChange(notebookId, cells, changeType);
+
+if (result.isErr()) {
+  console.error("Failed to track change:", result.error);
+  return new Response(JSON.stringify({ error: result.error }), {
+    status: 500,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+return new Response(JSON.stringify({ success: true }), {
+  status: 200,
+  headers: { "Content-Type": "application/json" },
+});
+---

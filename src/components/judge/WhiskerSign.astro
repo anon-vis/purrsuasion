@@ -1,0 +1,130 @@
+---
+import { assertStudent } from "../../lib/core/utils";
+import Window from "../Window.astro";
+
+assertStudent(Astro.locals);
+
+const { groupMembers, id } = Astro.locals;
+const senders = groupMembers.filter((m) => m.id !== id);
+---
+
+<Window id="whisker_sign" name="Contract signer" theme={"receiver"}>
+  <div class="bg-[#FFFFF9] p-8 text-black flow h-full">
+    <h2>Sign the contract</h2>
+
+    <form
+      class="p-0 flex flex-col gap-4"
+      hx-encoding="multipart/form-data"
+      hx-post="/student/pick-winner"
+    >
+      <label class="select w-full">
+        <span class="label">Choose data broker</span>
+        <select name="winner_user_id" required>
+          {senders.map((m) => <option value={m.id}>{m.username}</option>)}
+        </select>
+      </label>
+
+      <textarea
+        class="textarea w-full"
+        placeholder="Justification"
+        name="justification"
+        required></textarea>
+
+      <div class="h-2 w-full bg-gray-200"></div>
+
+      <div class="h-2 w-1/2 bg-gray-200"></div>
+
+      <div class="h-2 w-full bg-gray-200"></div>
+      <div class="h-2 w-3/4 bg-gray-200"></div>
+
+      <div class="h-2 w-full bg-gray-200"></div>
+
+      <div class="h-2 w-full bg-gray-200"></div>
+
+      <div class="h-2 w-full bg-gray-200"></div>
+
+      <div class="repel">
+        <canvas id="signature" class="h-12 border-pink border-3 w-[200px]"
+        ></canvas>
+
+        <button
+          type="submit"
+          class={`btn border-3 rounded-none btn-lg text-black bg-white border-pink hover:bg-pink`}
+          >confirm</button
+        >
+      </div>
+    </form>
+  </div>
+</Window>
+
+<script>
+  const canvas = document.getElementById("signature") as HTMLCanvasElement;
+  const ctx = canvas.getContext("2d")!;
+
+  // Set canvas resolution
+  canvas.width = 200;
+  canvas.height = 48;
+
+  // Pixelation settings
+  const pixelSize = 4;
+
+  // Disable image smoothing for pixelated effect
+  ctx.imageSmoothingEnabled = false;
+
+  let isDrawing = false;
+  let lastX = 0;
+  let lastY = 0;
+
+  function getPixelatedCoords(x: number, y: number) {
+    return {
+      x: Math.floor(x / pixelSize) * pixelSize,
+      y: Math.floor(y / pixelSize) * pixelSize,
+    };
+  }
+
+  function drawPixel(x: number, y: number) {
+    const coords = getPixelatedCoords(x, y);
+    ctx.fillStyle = "#433455";
+    ctx.fillRect(coords.x, coords.y, pixelSize, pixelSize);
+  }
+
+  canvas.addEventListener("mousedown", (e) => {
+    isDrawing = true;
+    const rect = canvas.getBoundingClientRect();
+    lastX = e.clientX - rect.left;
+    lastY = e.clientY - rect.top;
+    drawPixel(lastX, lastY);
+  });
+
+  canvas.addEventListener("mousemove", (e) => {
+    if (!isDrawing) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Draw line between last and current position
+    const dx = x - lastX;
+    const dy = y - lastY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const steps = Math.ceil(distance / pixelSize);
+
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const px = lastX + dx * t;
+      const py = lastY + dy * t;
+      drawPixel(px, py);
+    }
+
+    lastX = x;
+    lastY = y;
+  });
+
+  canvas.addEventListener("mouseup", () => {
+    isDrawing = false;
+  });
+
+  canvas.addEventListener("mouseleave", () => {
+    isDrawing = false;
+  });
+</script>

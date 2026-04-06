@@ -1,0 +1,76 @@
+---
+import z from "zod";
+import type { DomainError, Message } from "../../../lib/models";
+import { Result } from "neverthrow";
+import SentVis from "../../../components/classes/SentVis.astro";
+import { classService } from "../../../lib/services";
+import { notebookService } from "../../../lib/services";
+import IntermediateVis from "../../../components/classes/IntermediateVis.astro";
+
+export const prerender = false;
+export const partial = true;
+
+const parsedSender = z.coerce
+  .number()
+  .safeParse(Astro.url.searchParams.get("sender"));
+const parsedPrompt = z.string().safeParse(Astro.url.searchParams.get("prompt"));
+
+let messageResult: Result<
+  (Message & { sender_id: number; round_assignment_id: number })[],
+  DomainError
+>;
+let chartExecResult;
+
+if (parsedSender.success && parsedPrompt.success) {
+  messageResult = classService.getSenderThread(
+    parsedPrompt.data,
+    parsedSender.data,
+  );
+  if (messageResult && messageResult.isOk()) {
+    chartExecResult = notebookService.getCellExecutions(
+      messageResult.value[0].round_assignment_id,
+    );
+  }
+} else {
+  return Astro.redirect("/");
+}
+---
+
+<h3>Visualizations</h3>
+
+<div id="selected-student" hx-swap-oob="innerHTML">
+  Selected: student_{parsedSender.data}
+</div>
+
+<div class="flow">
+  <h4>Sent</h4>
+  {
+    messageResult && messageResult.isOk() && (
+      <SentVis messages={messageResult.value} />
+    )
+  }
+</div>
+
+<div class="flow">
+  <h4>Intermediate</h4>
+  {
+    chartExecResult && chartExecResult.isOk() && (
+      <IntermediateVis
+        execs={chartExecResult.value}
+        sender={parsedSender.data}
+        prompt={parsedPrompt.data}
+      />
+    )
+  }
+</div>
+
+
+<div id="sender-snapshots" hx-swap-oob="innerHTML">
+  <h3>Notebook Snapshot</h3>
+  <p>Select a viz to view snapshot.</p>
+</div>
+
+<div id="rubric" hx-swap-oob="innerHTML">
+  <h3>Rubric</h3>
+  <p>Select a viz to view relevant heuristics.</p>
+</div>

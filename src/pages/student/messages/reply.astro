@@ -1,0 +1,28 @@
+---
+import MailForm from "../../../components/messages/MailForm.astro";
+import { assertStudent } from "../../../lib/core/utils";
+
+assertStudent(Astro.locals);
+
+export const prerender = false;
+export const partial = true;
+
+const from = Astro.locals.id;
+const to = +Astro.url.searchParams.get("to")!;
+
+const buttonStyle = Astro.locals.isReceiver
+  ? "hover:bg-pink border-pink border-3"
+  : "hover:bg-blue border-blue border-3";
+---
+
+<MailForm from={from} to={to} />
+
+<!-- OOB swap the reply button so that it's disabled -->
+<button
+  disabled
+  id="reply-btn"
+  class={`text-[#838585] rounded-none border-0 bg-white btn btn-sm`}
+  hx-swap-oob="true"
+>
+  REPLY
+</button>

@@ -1,0 +1,26 @@
+---
+import { assertStudent } from "../../lib/core/utils";
+import { roundService } from "../../lib/services";
+
+assertStudent(Astro.locals);
+
+export const prerender = false;
+
+if (Astro.request.method !== "POST") {
+  return Astro.redirect(null, 404);
+}
+
+let result = roundService.startRound(Astro.locals.roundId);
+
+if (result && result.isOk()) {
+  return new Response(null, {
+    status: 204,
+    statusText: "No Content",
+    headers: {
+      "HX-Redirect": "/",
+    },
+  });
+} else if (result && result.isErr()) {
+  console.log(result.error);
+}
+---

@@ -1,0 +1,114 @@
+---
+import z from "zod";
+import RubricLayout from "../../../layouts/RubricLayout.astro";
+
+export const prerender = false;
+const parsed = z.coerce.number().safeParse(Astro.params.classId);
+const classId = parsed.success ? parsed.data : null;
+---
+
+<RubricLayout>
+  <div class="flex grow overflow-x-auto w-full h-screen max-h-screen">
+    <div
+      class="bg-black text-white w-[400px] p-[var(--space-xs)] overflow-y-scroll shrink-0"
+    >
+      <div class="flex flex-col justify-between h-full">
+        <div class="flow">
+          <a href={`/admin/classes/${classId}`}>
+            <h2>persuasion <span class="text-sm">rubric</span></h2>
+          </a>
+          <select
+            class="select text-black"
+            name="prompt"
+            hx-get={`/admin/rubric/senders?classId=${classId}`}
+            hx-target="#sender-list"
+            hx-swap="innerHTML"
+            hx-include="[name='prompt']"
+            hx-trigger="change"
+          >
+            <option disabled selected value="">Select a puzzle</option>
+            <option value="Hot Spots and MAUP">Hot Spots and MAUP</option>
+            <option value="Peaks and Gaps">Peaks and Gaps</option>
+            <option value="Outliers and Individual Points"
+              >Outliers and Individual Points</option
+            >
+          </select>
+          <h3>Senders</h3>
+
+          <div class="flow" id="sender-list">
+            <p>Select a puzzle to view sender list.</p>
+          </div>
+        </div>
+        <div class="flex flex-col gap-2">
+          <button
+            id="export-btn"
+            class="btn text-black"
+            data-class-id={classId}
+          >
+            export gameplay data
+          </button>
+          <li class="btn text-black" hx-post="/api/logout">log out</li>
+        </div>
+      </div>
+    </div>
+    <!-- Sender visualizations -->
+    <div
+      id="sender-visualizations"
+      class="border-r-3 border-[#EEEEEE] w-[500px] p-[var(--space-xs)] flow overflow-y-scroll shrink-0"
+    >
+      <h3>Visualizations</h3>
+      <p>Select a student to view visualizations.</p>
+    </div>
+    <!-- Snapshots that generated sender visualizations -->
+    <div
+      id="sender-snapshots"
+      class="border-r-3 border-[#EEEEEE] w-[500px] p-[var(--space-xs)] overflow-y-scroll shrink-0 flow"
+    >
+      <h3>Notebook Snapshot</h3>
+      <p>Select a viz to view snapshot.</p>
+    </div>
+    <!-- Scoring rubric based on the selected vis marks from last panel -->
+    <div
+      id="rubric"
+      class="w-full max-w-[500px] p-[var(--space-xs)] overflow-y-scroll shrink-0 flow"
+    >
+      <h3>Heuristics</h3>
+      <p>Select a viz to view relevant heuristics.</p>
+    </div>
+  </div>
+</RubricLayout>
+
+<script>
+  const btn = document.getElementById("export-btn") as HTMLButtonElement;
+  const classId = Number(btn.dataset.classId);
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    btn.textContent = "exporting...";
+
+    try {
+      const response = await fetch("/api/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ classId }),
+      });
+
+      if (!response.ok) {
+        const { error } = await response.json();
+        console.error("Export failed:", error);
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `gameplay-export-class-${classId}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "export gameplay data";
+    }
+  });
+</script>

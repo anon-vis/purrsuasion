@@ -1,0 +1,21 @@
+---
+export const prerender = false;
+
+if (Astro.request.method !== "POST") {
+  return Astro.redirect(null, 404);
+}
+
+Astro.cookies.delete("persuasion_game_token", {
+  httpOnly: true,
+  path: "/",
+  sameSite: "lax",
+});
+
+return new Response(null, {
+  status: 204,
+  statusText: "No Content",
+  headers: {
+    "HX-Redirect": "/login",
+  },
+});
+---

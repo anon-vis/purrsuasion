@@ -1,0 +1,73 @@
+---
+import z from "zod";
+import { notebookService } from "../../../lib/services";
+import type { Result } from "neverthrow";
+import type { DomainError } from "../../../lib/models";
+import SnapshotCells from "../../../components/classes/SnapshotCells.astro";
+import Rubric from "../../../components/classes/Rubric.astro";
+
+export const prerender = false;
+export const partial = true;
+
+const parsedSnapshot = z.coerce
+  .number()
+  .safeParse(Astro.url.searchParams.get("snapshot_id"));
+
+const parsedExecutedCell = z
+  .string()
+  .safeParse(Astro.url.searchParams.get("cell_id"));
+
+const parsedMarks = z.string().safeParse(Astro.url.searchParams.get("marks"));
+
+const parsedPrompt = z.string().safeParse(Astro.url.searchParams.get("prompt"));
+
+const parsedSender = z.coerce
+  .number()
+  .safeParse(Astro.url.searchParams.get("sender"));
+
+const detectedMarks: string[] = parsedMarks.success
+  ? parsedMarks.data.split(",").map((m) => m.trim().toLowerCase())
+  : [];
+
+let snapshotResult: Result<
+  { cell_id: string; source: string; cell_type: string }[],
+  DomainError
+>;
+
+if (
+  parsedSnapshot.success &&
+  parsedExecutedCell.success &&
+  parsedPrompt.success &&
+  parsedSender.data
+) {
+  snapshotResult = notebookService.getCellsAtSnapshot(parsedSnapshot.data);
+} else {
+  return Astro.redirect("/");
+}
+---
+
+<div class="flow overflow-y-scroll">
+  <h3>Notebook Snapshot</h3>
+  {
+    snapshotResult && snapshotResult.isOk() && (
+      <SnapshotCells
+        snapshot={snapshotResult.value}
+        prompt="Outliers and Individual Points"
+        executed_cell_id={parsedExecutedCell.data}
+      />
+    )
+  }
+</div>
+
+<div id="rubric" hx-swap-oob="innerHTML">
+  <Rubric
+    sender={parsedSender.data}
+    prompt={parsedPrompt.data}
+    marks={detectedMarks}
+    snapshot={parsedSnapshot.data}
+  />
+</div>
+
+<div id="selected-vis" hx-swap-oob="innerHTML">
+  Selected: {parsedSnapshot.data}
+</div>

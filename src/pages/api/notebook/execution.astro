@@ -1,0 +1,52 @@
+---
+import { notebookService } from "../../../lib/services";
+import type { Cell } from "../../../lib/models";
+
+export const prerender = false;
+
+if (Astro.request.method !== "POST") {
+  return Astro.redirect(null, 404);
+}
+
+type ExecutionStatus = "success" | "error";
+
+const body = await Astro.request.json();
+const { notebookId, cells, executedCellId, status, context } = body as {
+  notebookId: number;
+  cells: Cell[];
+  executedCellId: string;
+  status: ExecutionStatus;
+  context: string;
+};
+
+if (!notebookId || !cells || !executedCellId || !status) {
+  return new Response(JSON.stringify({ error: "Missing required fields" }), {
+    status: 400,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+const result = notebookService.logCellExecution(
+  notebookId,
+  cells,
+  executedCellId,
+  status,
+  context
+);
+
+if (result.isErr()) {
+  console.error("Failed to track execution:", result.error);
+  return new Response(JSON.stringify({ error: result.error }), {
+    status: 500,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+return new Response(
+  JSON.stringify({ success: true, executionId: result.value }),
+  {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  }
+);
+---

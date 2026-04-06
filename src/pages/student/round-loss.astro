@@ -1,0 +1,37 @@
+---
+export const partial = true;
+export const prerender = false;
+---
+
+<div
+  id="round-loss"
+  class="absolute bg-[url('../assets/side_panel.png')] z-9999 w-full h-screen flex justify-center items-center flex-col gap-8"
+>
+  <div
+    class="border-4 border-[#c3c3c3] bg-[#fefefe] m-2 overflow-clip w-fit window"
+  >
+    <div class={`repel m-1 p-2 bg-black text-white`}>
+      <div class="font-bold text-[#838585]">Round pending start...</div>
+      <button
+        hx-post="/api/logout"
+        class="hover:scale-105 font-bold btn border-3 border-l-[#DDDFDD] border-t-[#DDDFDD] border-r-[#838585] border-b-[#838585] bg-[#c3c3c3] text-black btn-xs btn-square rounded-none"
+      >
+        x
+      </button>
+    </div>
+
+    <div
+      class="m-1 border-4 border-[#E1E1E1] p-10 flow flex items-center flex-col"
+    >
+      <h2>You did not secure the contract...</h2>
+
+      <p class="max-w-[70ch] text-lg">You'll get em next time!</p>
+      <a
+        href="/"
+        class={`btn border-3 rounded-none hover:text-white btn-lg text-black text-xl bg-white border-black hover:bg-black`}
+      >
+        start next round
+      </a>
+    </div>
+  </div>
+</div>

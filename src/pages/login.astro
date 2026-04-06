@@ -1,0 +1,53 @@
+---
+import LoginLayout from "../layouts/LoginLayout.astro";
+
+export const prerender = false;
+
+if (Astro.cookies.get("persuasion_game_token")) {
+  return Astro.redirect("/");
+}
+---
+
+<LoginLayout>
+  <div
+    class="custom-grid border w-full h-full p-[var(--space-m)]"
+    data-layout="halves"
+    style="--gutter: 9rem;"
+  >
+    <div
+      class="p-2 hidden lg:block bg-[url('../assets/side_panel.png')] border-4 border-gray-100 bg-cover rounded-none"
+    >
+      <div></div>
+    </div>
+    <form
+      hx-post="/api/login"
+      hx-target="#login-message"
+      hx-swap="innerHTML"
+      class="w-full flow flex flex-col justify-center"
+    >
+      <div class="text-4xl font-bold">Sign in to persuasion</div>
+
+      <div class="text-gray-400">
+        Chart your way to victory while keeping some secrets.
+      </div>
+
+      <div class="divider"></div>
+
+      <label class="floating-label w-full">
+        <input
+          name="username"
+          type="text"
+          placeholder="Username"
+          class="input input-xl w-full"
+          required
+        />
+        <span>Username</span>
+      </label>
+
+      <button class="btn btn-xl bg-black text-white w-full" type="submit">
+        <span class="text-2xl">Sign in</span>
+      </button>
+      <div id="login-message"></div>
+    </form>
+  </div>
+</LoginLayout>

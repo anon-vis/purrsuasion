@@ -1,0 +1,174 @@
+---
+import rubric from "../../assets/data/rubric.json";
+
+interface Props {
+  prompt: string;
+  marks: string[];
+  sender: number;
+  snapshot: number;
+}
+
+const { prompt, marks, sender, snapshot } = Astro.props;
+
+const puzzle = rubric.puzzles.find((p) => p.name === prompt);
+
+const signals = (puzzle?.signals ?? []).map((signal) => ({
+  name: signal.name,
+  role: signal.role,
+  relevant_fields: signal.relevant_fields,
+  heuristics: signal.markset
+    .filter((m) => marks.includes(m.mark.toLowerCase()))
+    .map((m) => ({
+      mark: m.mark,
+      heuristic: m.heuristic,
+    })),
+}));
+---
+
+<h3>Heuristics</h3>
+
+<div
+  class="flow"
+  id="rubric-form"
+  data-sender={sender}
+  data-snapshot={snapshot}
+>
+  {
+    signals.map((signal) => (
+      <div class="border-3 border-[#EEEEEE] bg-[#FFFFF9]">
+        <div class="card-body p-4 gap-3">
+          <div class="flex items-center gap-2">
+            <span class="font-mono font-medium text-sm italic">
+              {signal.name}
+            </span>
+            <span
+              class:list={[
+                "badge badge-sm",
+                signal.role === "receiver" ? "bg-pink" : "bg-blue",
+              ]}
+            >
+              {signal.role}
+            </span>
+          </div>
+
+          <div class="flex flex-wrap gap-1">
+            {signal.relevant_fields.map((field) => (
+              <span class="badge badge-sm badge-outline font-mono">
+                {field}
+              </span>
+            ))}
+          </div>
+
+          {signal.heuristics.length === 0 ? (
+            <p class="text-base-content/50 text-sm italic">
+              No matching marks detected.
+            </p>
+          ) : (
+            <div class="flex flex-col divide-y divide-base-200">
+              {signal.heuristics.map((h) => {
+                const name = `${signal.name}-${h.mark}`;
+                return (
+                  <div class="flex gap-3 py-3 first:pt-0 last:pb-0">
+                    <span class="font-mono text-xs text-base-content/60 w-14 shrink-0 pt-0.5">
+                      {h.mark}
+                    </span>
+                    <div class="flex flex-col gap-2 flex-1">
+                      <p class="text-sm text-base-content/80 leading-relaxed">
+                        {h.heuristic}
+                      </p>
+                      <div class="filter">
+                        <input
+                          class="btn btn-xs filter-reset"
+                          type="radio"
+                          name={name}
+                          aria-label="clear"
+                        />
+                        <input
+                          class="btn btn-xs btn-success btn-soft"
+                          type="radio"
+                          name={name}
+                          aria-label="satisfied"
+                          value="satisfied"
+                        />
+                        <input
+                          class="btn btn-xs btn-warning btn-soft"
+                          type="radio"
+                          name={name}
+                          aria-label="risked"
+                          value="risked"
+                        />
+                        <input
+                          class="btn btn-xs btn-error btn-soft"
+                          type="radio"
+                          name={name}
+                          aria-label="broken"
+                          value="broken"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    ))
+  }
+</div>
+
+<script>
+  function storageKey(sender: string, snapshot: string, name: string) {
+    return `scores:${sender}:${snapshot}:${name}`;
+  }
+
+  function initRubric() {
+    const form = document.getElementById("rubric-form");
+    if (!form) return;
+
+    const sender = form.dataset.sender!;
+    const snapshot = form.dataset.snapshot!;
+
+    // repopulate from localStorage
+    form
+      .querySelectorAll<HTMLInputElement>("input[type='radio']")
+      .forEach((input) => {
+        if (!input.value) return;
+        const key = storageKey(sender, snapshot, input.name);
+        const stored = localStorage.getItem(key);
+        console.log(stored);
+        if (stored === input.value) {
+          input.checked = true;
+        }
+      });
+
+    // persist on change
+    form
+      .querySelectorAll<HTMLInputElement>("input[type='radio'][value]")
+      .forEach((input) => {
+        input.addEventListener("change", () => {
+          if (!input.checked) return;
+          const key = storageKey(sender, snapshot, input.name);
+          if (input.value) {
+            localStorage.setItem(key, input.value);
+          } else {
+            localStorage.removeItem(key);
+          }
+        });
+      });
+
+    form
+      .querySelectorAll<HTMLInputElement>("input[type='radio']:not([value])")
+      .forEach((input) => {
+        input.addEventListener("change", () => {
+          if (!input.checked) return;
+          const key = storageKey(sender, snapshot, input.name);
+          localStorage.removeItem(key);
+        });
+      });
+  }
+
+  (window as any).initRubric = initRubric;
+
+  initRubric();
+</script>

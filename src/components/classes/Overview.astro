@@ -1,0 +1,113 @@
+---
+import type { ClassOverview } from "../../lib/models";
+
+interface Props {
+  classId: number;
+  overview: ClassOverview;
+}
+
+const { classId, overview } = Astro.props;
+---
+
+<div id="overview">
+{
+    overview.status === "inactive" ? (
+        <div class="flow">
+            <div class="repel">
+                <h2>{overview.name} ({overview.description})</h2>
+                <button disabled={overview.students.length < 2} class="btn" onclick="confirm_start_modal.showModal()">start class</button>
+            </div>
+
+            <table class="table table-zebra table-fixed">
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>Username</th>
+                        <th>Status</th>
+                        <th>Consented</th>                        
+                    </tr>
+                </thead>
+                <tbody>
+                    {overview.students.map((student) => (
+                        <tr>
+                            <td>{student.id}</td>
+                            <td>{student.username}</td>
+                            <td>
+                                {student.is_active ?
+                                <button class="btn btn-warning" hx-patch="/admin/students/toggle-active" hx-swap="outerHTML" hx-vals={`{"id": ${student.id}, "is_active": ${student.is_active ? 0 : 1}}`}>deactivate</button>
+                                :
+                                <button class="btn" hx-patch="/admin/students/toggle-active" hx-swap="outerHTML" hx-vals={`{"id": ${student.id}, "is_active": ${!student.is_active ? 1 : 0}}`}>activate</button>                                }
+                            </td>
+                            <td>
+                                {student.is_consented ?
+                                <button class="btn btn-warning" hx-patch="/admin/students/toggle-consent" hx-swap="outerHTML" hx-vals={`{"id": ${student.id}, "is_consented": ${student.is_consented ? 0 : 1}}`}>unconsent</button>
+                                :
+                                <button class="btn" hx-patch="/admin/students/toggle-consent" hx-swap="outerHTML" hx-vals={`{"id": ${student.id}, "is_consented": ${!student.is_consented ? 1 : 0}}`}>consent</button>                                }
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+
+        <dialog id="confirm_start_modal" class="modal">
+          <div class="modal-box">
+              <div class="text-(length:--step-1)">Confirm Start</div>
+            <p class="py-[var(--space-s)]">Please make sure any students not in attendance are deactivated before starting.</p>
+            <div class="modal-action">
+                <div class="flex gap-2">
+                    <button class="btn btn-primary" hx-patch="/admin/classes/start" hx-target="#overview" hx-vals={`{"classId": ${classId}}`} onclick="confirm_start_modal.close()">confirm</button>
+                  <button class="btn" onclick="confirm_start_modal.close()">cancel</button>
+              </div>
+            </div>
+          </div>
+        </dialog>
+    ) : (
+        <div class="flow">
+            <div class="flex justify-between">
+                <h2>{overview.name} ({overview.description})</h2>
+                <a href={`/admin/rubric/${classId}`}  class="link">go to rubric</a>
+            </div>
+            {overview.groups.map((group) => (
+                <div class="flow">
+                    <div class="repel">
+                        <div>
+                        Group #{group.groupId}
+                        </div>
+
+                        <div class="flex gap-2">
+                           Current round: {group.currentRound}
+                        </div>
+                    </div>
+                    <table class="table table-fixed table-zebra">
+                        <thead>
+                            <tr>
+                                <th>
+                                    Username
+                                </th>
+                                <th>Role</th>
+                                <th>Consented</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {group.students.map((student) => (
+                            <tr>
+                                <td>
+                                    {student.username}
+                                </td>
+                                <td>
+                                    {group.receiverId === student.id ? 'receiver' : 'sender'}
+                                </td>
+                                <td>
+                                    {student.is_consented ? "yes" : "no"}
+                                </td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </div>
+            ))}
+        </div>
+    )
+}
+</div>

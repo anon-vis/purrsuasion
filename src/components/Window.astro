@@ -1,0 +1,61 @@
+---
+interface Props {
+  id: string;
+  name: string;
+  theme: "receiver" | "sender";
+}
+
+const { id, name, theme } = Astro.props;
+
+const bgColor = theme === "receiver" ? "bg-pink" : "bg-blue";
+---
+
+<dialog
+  open
+  id={id}
+  class="resize w-[calc(50vw_-_16px)] border-4 border-[#c3c3c3] bg-[#fefefe] h-[calc(100vh_-_96px)] m-2"
+>
+  <div class={`repel ${bgColor} m-1 py-1 px-2`}>
+    <div class="font-bold text-[#838585]">{name.toLocaleUpperCase()}</div>
+    <button
+      onclick={`${id}.close()`}
+      class="hover:scale-105 font-bold btn border-3 border-l-[#DDDFDD] border-t-[#DDDFDD] border-r-[#838585] border-b-[#838585] bg-[#c3c3c3] text-black btn-xs btn-square rounded-none"
+      >x</button
+    >
+  </div>
+  <div
+    style={`${theme === "receiver" ? "--thumb-color: var(--color-pink);" : ""}`}
+    class="scroll-container overflow-y-auto m-1 border-4 border-[#E1E1E1] h-full max-h-[calc(100vh_-_148px)]"
+  >
+    <slot />
+  </div>
+</dialog>
+
+<style>
+  dialog {
+    opacity: 0;
+    transform: scale(1, 0);
+    transition:
+      opacity 0.5s ease,
+      transform 0.5s ease,
+      display 0.5s ease allow-discrete;
+    transform-origin: center;
+  }
+
+  dialog[open] {
+    opacity: 1;
+    transform: scale(1, 1);
+  }
+
+  @starting-style {
+    dialog[open] {
+      opacity: 0;
+      transform: scale(1, 0);
+    }
+  }
+</style>
+
+<script define:vars={{ id }} is:inline>
+  const dialog = document.getElementById(id);
+  dialog.showModal();
+</script>

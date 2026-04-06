@@ -1,0 +1,25 @@
+---
+interface Props {
+  senders: { user_id: number }[];
+  prompt: string;
+}
+
+const { senders, prompt } = Astro.props;
+---
+
+<div id="selected-student"></div>
+
+<ul class="flex flex-col gap-2">
+  {
+    senders.map((u) => (
+      <li
+        id={`sender-${u.user_id}-list-item`}
+        class="p-2 border w-full cursor-pointer hover:bg-white hover:text-black bg-black text-white"
+        hx-get={`/admin/rubric/visualizations?prompt=${prompt}&sender=${u.user_id}`}
+        hx-target="#sender-visualizations"
+      >
+        student_{u.user_id}
+      </li>
+    ))
+  }
+</ul>

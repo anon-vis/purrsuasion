@@ -1,0 +1,90 @@
+---
+import type { Message } from "../../lib/models";
+import MailPreview from "./MailPreview.astro";
+import { assertStudent } from "../../lib/core/utils";
+import Window from "../Window.astro";
+
+export const prerender = false;
+
+interface Props {
+  hasSentMessages: boolean;
+  inbox: Message[];
+}
+
+assertStudent(Astro.locals);
+
+const { roundId, groupId, isReceiver } = Astro.locals;
+const { inbox, hasSentMessages } = Astro.props;
+
+const buttonStyle = isReceiver
+  ? "hover:bg-pink border-pink border-3"
+  : "hover:bg-blue border-blue border-3";
+
+// TODO: Build styles depending on current user type
+---
+
+<Window theme={isReceiver ? "receiver" : "sender"} id="meow_mail" name="Mail">
+  <div
+    class="p-5 flow text-black"
+    hx-trigger="sse:message_received"
+    hx-include="[name='selected']"
+    hx-get={`/student/messages/refresh?roundId=${roundId}`}
+    hx-target="#msg-list"
+    hx-swap="outerHTML"
+  >
+    <div class="repel">
+      <div class="flex gap-4 items-end">
+        <h3>Inbox</h3>
+      </div>
+      {
+        isReceiver && (
+          <div
+            class="tooltip tooltip-left"
+            data-tip={
+              hasSentMessages
+                ? "You've sent your initial query. Wait for senders to respond for now."
+                : ""
+            }
+          >
+            <button
+              disabled={hasSentMessages}
+              id="draft-btn"
+              class={`${hasSentMessages ? "border-0" : buttonStyle}text-[#838585] bg-white rounded-none btn-sm border-3 btn`}
+              hx-target="#msg-thread"
+              hx-swap="innerHTML"
+              hx-get={`/student/messages/draft?groupId=${groupId}&roundId=${roundId}`}
+            >
+              NEW MAIL
+            </button>
+          </div>
+        )
+      }
+    </div>
+    <div class="flow">
+      <input
+        id="selected-thread"
+        type="number"
+        name="selected"
+        class="visually-hidden"
+        value="-1"
+      />
+      <!-- List -->
+      <ul id="msg-list" class="flex gap-4">
+        {
+          inbox.map((msg) => (
+            <MailPreview message={msg} isSelected={false} isNew={false} />
+          ))
+        }
+      </ul>
+
+      <!-- Selected thread -->
+      <div id="msg-thread" class="border-3 border-[#EEEEEE] bg-white">
+        <div
+          class="w-full flex justify-center items-center font-medium h-full p-2"
+        >
+          Select a message to read it (if there are any).
+        </div>
+      </div>
+    </div>
+  </div>
+</Window>

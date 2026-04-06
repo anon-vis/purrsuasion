@@ -1,0 +1,53 @@
+---
+import z from "zod";
+import { userService } from "../../../lib/services/";
+
+export const prerender = false;
+export const partial = true;
+
+if (Astro.request.method !== "PATCH") {
+  return Astro.redirect(null, 404);
+}
+
+const formData = await Astro.request.formData();
+
+const parsed = z
+  .object({
+    id: z.coerce.number(),
+    is_active: z.coerce.number(),
+  })
+  .safeParse({ id: formData.get("id"), is_active: formData.get("is_active") });
+
+if (parsed.success) {
+  userService.toggleActive(parsed.data.id);
+} else {
+  console.log(parsed.error);
+}
+---
+
+{
+  parsed.success && parsed.data.is_active === 1 && (
+    <button
+      class="btn btn-warning"
+      hx-target="this"
+      hx-patch="/admin/students/toggle-active"
+      hx-swap="outerHTML"
+      hx-vals={`{"id": ${parsed.data.id}, "is_active": ${parsed.data.is_active ? 0 : 1}}`}
+    >
+      deactivate
+    </button>
+  )
+}
+
+{
+  parsed.success && !parsed.data.is_active && (
+    <button
+      class="btn"
+      hx-patch="/admin/students/toggle-active"
+      hx-swap="outerHTML"
+      hx-vals={`{"id": ${parsed.data.id}, "is_active": ${!parsed.data.is_active ? 1 : 0}}`}
+    >
+      activate
+    </button>
+  )
+}

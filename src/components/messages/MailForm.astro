@@ -1,0 +1,221 @@
+---
+import { assertStudent } from "../../lib/core/utils";
+
+assertStudent(Astro.locals);
+
+interface Props {
+  from: number;
+  to?: number;
+}
+
+const { groupId, roundId, isReceiver, groupMembers } = Astro.locals;
+const { from, to } = Astro.props;
+
+const buttonStyle = Astro.locals.isReceiver
+  ? "hover:bg-pink border-pink"
+  : "hover:bg-blue border-blue";
+---
+
+<div class="border-0 p-[var(--space-s)] text-black bg-[#FFFFF9]/50">
+  <form
+    class="flow"
+    hx-encoding="multipart/form-data"
+    hx-post="/student/messages/send"
+    hx-target="#msg-list"
+    hx-swap="outerHTML"
+  >
+    <input class="visually-hidden" type="number" name="sender" value={from} />
+
+    <input class="visually-hidden" type="number" name="recipient" value={to} />
+
+    {
+      groupId && (
+        <input
+          class="visually-hidden"
+          type="number"
+          name="group_id"
+          value={groupId}
+        />
+      )
+    }
+
+    <input
+      class="visually-hidden"
+      type="number"
+      name="round_id"
+      value={roundId}
+    />
+
+    <div class="repel">
+      <div class="flex flex-col gap-1">
+        <div>{groupMembers.find((u) => u.id === from)?.username}</div>
+        <div>
+          To: {
+            !to
+              ? "All senders"
+              : `${groupMembers.find((u) => u.id === to)?.username}`
+          }
+        </div>
+        <input
+          class="input"
+          name="subject"
+          placeholder="Subject"
+          required
+          autocomplete="off"
+        />
+      </div>
+      <div class="flex flex-col gap-1">
+        <button
+          type="submit"
+          class={`${buttonStyle} text-[#838585] rounded-none border-3 bg-white btn btn-sm`}
+          >SEND</button
+        >
+        <span>
+          {
+            new Date().toLocaleTimeString([], {
+              hour: "numeric",
+              minute: "2-digit",
+            })
+          }
+        </span>
+      </div>
+    </div>
+
+    <div
+      id="drop-zone"
+      class="border-2 border-dashed border-gray-300 bg-white rounded p-4 text-center transition-colors"
+    >
+      <input
+        id="cell-id-input"
+        type="text"
+        class="visually-hidden"
+        name="cell_id"
+        value=""
+      />
+      <input
+        id="file-input"
+        required={!isReceiver}
+        name="visualization"
+        type="file"
+        accept="image/png, image/jpeg"
+        class="opacity-0 absolute"
+      />
+      <div id="drop-zone-content">
+        <p class="text-gray-500">
+          Drag visualization here or <button
+            type="button"
+            id="browse-btn"
+            class="underline">browse</button
+          >
+        </p>
+      </div>
+      <div id="image-preview" class="hidden mt-2"></div>
+    </div>
+
+    <textarea
+      name="body"
+      class="textarea w-full max-h-[5rem]"
+      placeholder="Body"
+      required></textarea>
+  </form>
+</div>
+
+<script>
+  const dropZone = document.getElementById("drop-zone");
+  const fileInput = document.getElementById("file-input") as HTMLInputElement;
+  const cellIdInput = document.getElementById(
+    "cell-id-input",
+  ) as HTMLInputElement;
+  const browseBtn = document.getElementById("browse-btn");
+  const dropZoneContent = document.getElementById("drop-zone-content")!;
+  const imagePreview = document.getElementById("image-preview")!;
+
+  if (
+    dropZone &&
+    fileInput &&
+    cellIdInput &&
+    browseBtn &&
+    dropZoneContent &&
+    imagePreview
+  ) {
+    browseBtn.addEventListener("click", () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener("change", (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) {
+        displayPreview(URL.createObjectURL(file));
+        cellIdInput.value = "";
+      }
+    });
+
+    dropZone.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      dropZone.classList.add("bg-blue");
+    });
+
+    dropZone.addEventListener("dragleave", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      dropZone.classList.remove("border-blue-500", "bg-blue-50");
+    });
+
+    dropZone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      dropZone.classList.remove("border-blue-500", "bg-blue-50");
+
+      const dataUrl = event.dataTransfer?.getData("text/plain");
+      const cellId = event.dataTransfer?.getData("application/cell-id");
+
+      if (dataUrl && dataUrl.startsWith("data:image")) {
+        dataURLtoFile(dataUrl, "visualization.png").then((file) => {
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          fileInput.files = dataTransfer.files;
+          displayPreview(dataUrl);
+
+          if (cellId) {
+            cellIdInput.value = cellId;
+          }
+        });
+      } else {
+        const file = event.dataTransfer?.files[0];
+        if (file && file.type.startsWith("image/")) {
+          fileInput.files = event.dataTransfer.files;
+          displayPreview(URL.createObjectURL(file));
+          cellIdInput.value = "";
+        }
+      }
+    });
+
+    function displayPreview(url: string) {
+      dropZoneContent.classList.add("hidden");
+      imagePreview.classList.remove("hidden");
+      imagePreview.innerHTML = `
+        <img src="${url}" alt="Preview" class="max-w-full h-auto max-h-48 mx-auto" />
+        <button type="button" id="remove-btn" class="btn btn-xs border-3 border-red mt-2 text-red text-sm hover:bg-red hover:text-white rounded-none bg-white">DEL</button>
+      `;
+
+      const removeBtn = document.getElementById("remove-btn");
+      removeBtn?.addEventListener("click", () => {
+        fileInput.value = "";
+        cellIdInput.value = "";
+        imagePreview.classList.add("hidden");
+        imagePreview.innerHTML = "";
+        dropZoneContent.classList.remove("hidden");
+      });
+    }
+
+    async function dataURLtoFile(
+      dataUrl: string,
+      filename: string,
+    ): Promise<File> {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      return new File([blob], filename, { type: "image/png" });
+    }
+  }
+</script>

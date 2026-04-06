@@ -1,0 +1,37 @@
+---
+import { classService } from "../../../lib/services";
+import z from "zod";
+import Overview from "../../../components/classes/Overview.astro";
+import type { ClassOverview } from "../../../lib/models";
+
+export const prerender = false;
+export const partial = true;
+
+if (Astro.request.method !== "PATCH") {
+  return Astro.redirect(null, 404);
+}
+
+const formData = await Astro.request.formData();
+const parsed = z
+  .object({
+    classId: z.coerce.number(),
+  })
+  .safeParse({ classId: formData.get("classId") });
+
+let overview: ClassOverview | undefined;
+if (parsed.success) {
+  const startClassResult = classService.startClass(parsed.data.classId);
+  if (startClassResult.isOk()) {
+    const overviewResult = classService.getClassOverview(parsed.data.classId);
+    overview = overviewResult.isOk() ? overviewResult.value : undefined;
+  } else {
+    console.log(startClassResult.error);
+  }
+}
+---
+
+{
+  parsed.success && overview && (
+    <Overview classId={parsed.data.classId} overview={overview} />
+  )
+}

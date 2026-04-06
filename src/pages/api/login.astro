@@ -1,0 +1,37 @@
+---
+import { authService } from "../../lib/services/";
+
+export const prerender = false;
+
+if (Astro.request.method !== "POST") {
+  return Astro.redirect(null, 404);
+}
+
+const formData = await Astro.request.formData();
+const username = formData.get("username") as string;
+
+const tokenResult = await authService.login(username, username);
+
+if (tokenResult.isOk()) {
+  Astro.cookies.set("persuasion_game_token", tokenResult.value, {
+    httpOnly: true,
+    maxAge: 60 * 60 * 2,
+    path: "/",
+    sameSite: "lax",
+  });
+
+  Astro.response.headers.set("HX-Redirect", "/");
+
+  return new Response(null, {
+    status: 204,
+    statusText: "No Content",
+    headers: {
+      "HX-Redirect": "/",
+    },
+  });
+}
+---
+
+<span class="text-error">
+  {tokenResult.isErr() && tokenResult.error.type}
+</span>

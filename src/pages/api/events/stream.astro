@@ -1,0 +1,42 @@
+---
+import { sseService } from "../../../lib/services";
+
+export const prerender = false;
+
+if (Astro.request.method !== "GET") {
+  return Astro.redirect(null, 404);
+}
+
+const userId = Astro.locals.id;
+
+const stream = new ReadableStream({
+  start: async (controller) => {
+    try {
+      await sseService.addConnectionByUserId(userId, controller);
+    } catch (error) {
+      console.error("Error establishing SSE connection:", error);
+      // Don't call controller.error if already closed
+      try {
+        if (controller.desiredSize !== null) {
+          controller.error(error);
+        }
+      } catch {
+        // Controller already closed, ignore
+      }
+    }
+  },
+  cancel: () => {
+    // Let the service handle cleanup - it has the closed state tracking
+    sseService.removeConnection(userId);
+  },
+});
+
+return new Response(stream, {
+  headers: {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  },
+});
+---

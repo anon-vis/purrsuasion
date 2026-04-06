@@ -1,0 +1,52 @@
+---
+import { roundService } from "../../../lib/services";
+import Mail from "../../../components/messages/Mail.astro";
+import MailPreview from "../../../components/messages/MailPreview.astro";
+
+export const partial = true;
+export const prerender = false;
+
+const userId = Astro.locals.id;
+const selectedThread = +Astro.url.searchParams.get("selected")!;
+const roundId = +Astro.url.searchParams.get("roundId")!;
+
+const inboxResult = roundService.getInbox(userId, roundId);
+const threadResult = roundService.getThread(userId, selectedThread, roundId);
+
+if (inboxResult.isErr()) {
+  return Astro.redirect("/error");
+}
+
+if (threadResult.isErr()) {
+  return Astro.redirect("/error");
+}
+
+const thread = threadResult.value;
+const inbox = inboxResult.value.inbox;
+const newMessage = inbox[0];
+const newMessageInSelectedThread = newMessage?.user_id === selectedThread;
+---
+
+<ul id="msg-list" class="flex gap-4">
+  {
+    inbox.map((m, i) => (
+      <MailPreview
+        message={m}
+        isNew={i === 0}
+        isSelected={newMessageInSelectedThread}
+      />
+    ))
+  }
+</ul>
+
+{
+  newMessageInSelectedThread && (
+    <div id="msg-thread" hx-swap-oob="beforeend">
+      <Mail
+        message={newMessage}
+        isMostRecentMessageInThread={true}
+        threadSize={thread.length}
+      />
+    </div>
+  )
+}

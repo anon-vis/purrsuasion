@@ -1,0 +1,34 @@
+---
+import { Result } from "neverthrow";
+import z from "zod";
+import Overview from "../../../components/classes/Overview.astro";
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { classService } from "../../../lib/services/index";
+import type { DomainError, ClassOverview } from "../../../lib/models";
+
+export const prerender = false;
+const parsed = z.coerce.number().safeParse(Astro.params.classId);
+
+let overview: Result<ClassOverview, DomainError>;
+
+if (parsed.success) {
+  overview = classService.getClassOverview(parsed.data);
+} else {
+  return Astro.redirect("/");
+}
+---
+
+<AdminLayout>
+  <div>
+    {
+      overview && overview.isOk() && (
+        <Overview classId={parsed.data!} overview={overview.value} />
+      )
+    }
+
+    {
+      !overview ||
+        (overview && overview.isErr() && <div>Class does not exist.</div>)
+    }
+  </div>
+</AdminLayout>

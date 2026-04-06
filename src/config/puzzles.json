@@ -1,0 +1,379 @@
+{
+  "puzzles": [
+    {
+      "name": "Outliers and Individual Points",
+      "prompts": [
+        {
+          "role": "receiver",
+          "instructions": "You're a city logistics planner allocating inspection teams for next month. Outliers in either workload or lateness could signal bottlenecks or failing warehouses. You need to be able to identify which warehouses are atypical so you can plan targeted audits. Your task is to choose a data broker (sender) who you trust to provide this information in full upon signing a contract.",
+          "condensed_instructions": "Show which warehouses are outliers.",
+          "is_for_receiver": true
+        },
+        {
+          "role": "sender",
+          "instructions": "You're a data broker selling a dataset on warehouse performance. You want to build trust by demonstrating that the dataset contains the information that your potential client (the receiver) needs. However, to protect your supplier relationships and to avoid pinpointing individual warehouses, you should hide warehouses and zone identities in your visualizations.",
+          "condensed_instructions": "Hide individual warehouses and zones.",
+          "is_for_receiver": false
+        }
+      ],
+      "signals": [
+        {
+          "name": "isOutlier",
+          "role": "receiver",
+          "relevant_fields": ["avg_daily_parcels", "pct_late_deliveries"],
+          "markset": [
+            {
+              "mark": "Area",
+              "heuristic": "Area can disclose outliers but depends on the bandwidth."
+            },
+            {
+              "mark": "Bar",
+              "heuristic": "A bar mark reveals an outlier when it is clearly separated from the rest of the distribution. If bin(), depends on bin size."
+            },
+            {
+              "mark": "Boxplot",
+              "heuristic": "Boxplot discloses outliers by default."
+            },
+            {
+              "mark": "Geoshape",
+              "heuristic": "Geoshape discloses outliers if the outlier is at the level of aggregation."
+            },
+            {
+              "mark": "Line",
+              "heuristic": "Line can disclose outliers but depends on the interpolation."
+            },
+            {
+              "mark": "Point",
+              "heuristic": "Points will disclose outliers but can be hard to perceive due to overplotting or large point size."
+            },
+            {
+              "mark": "Circle",
+              "heuristic": "Points will disclose outliers but can be hard to perceive due to overplotting or large point size."
+            },
+            {
+              "mark": "Rect",
+              "heuristic": "Rect can disclose outliers when clearly separated from the rest of the distribution but depends on bin size."
+            },
+            {
+              "mark": "Tick",
+              "heuristic": "Ticks can disclose outliers but can be hard to perceive due to overplotting."
+            },
+            {
+              "mark": "Trail",
+              "heuristic": "Trail discloses outliers if var is encoded as position directly; isolated trails can show outliers, encoding var as width can hide them."
+            }
+          ]
+        },
+        {
+          "name": "isIndividualPoint",
+          "role": "sender",
+          "relevant_fields": ["warehouse_id", "zone"],
+          "markset": [
+            {
+              "mark": "Area",
+              "heuristic": "Area usually hides individual points but depends on bandwidth."
+            },
+            {
+              "mark": "Bar",
+              "heuristic": "Bar discloses individual points if one bar corresponds to one record; if bin(), depends on bin size."
+            },
+            {
+              "mark": "Boxplot",
+              "heuristic": "Boxplot hides individual points by default but discloses if raw points or outlier points are overlaid."
+            },
+            {
+              "mark": "Geoshape",
+              "heuristic": "Geoshape can disclose individual points if var is defined as points within a GeoDataFrame using the geoshape mark."
+            },
+            {
+              "mark": "Line",
+              "heuristic": "Discloses if raw observations are connected and individual vertices are readable; smoothing or aggregation can hide them."
+            },
+            {
+              "mark": "Point",
+              "heuristic": "Points will disclose individual points by default but can be hard to perceive if point size is large or due to overplotting."
+            },
+            {
+              "mark": "Circle",
+              "heuristic": "Points will disclose individual points by default but can be hard to perceive if point size is large or due to overplotting."
+            },
+            {
+              "mark": "Rect",
+              "heuristic": "Rect marks can disclose specific locations if bins are very small, containing a single data point."
+            },
+            {
+              "mark": "Tick",
+              "heuristic": "Ticks can disclose individual points if each tick corresponds to a separate record and remains visually separable."
+            }
+          ]
+        }
+      ],
+      "defaultNotebook": [
+        {
+          "cell_type": "code",
+          "source": [
+            "import pandas as pd",
+            "import altair as alt",
+            "import numpy as np"
+          ]
+        },
+        {
+          "cell_type": "code",
+          "source": [
+            "df = pd.read_csv('/oaip.csv')",
+            "df.head(10)"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Peaks and Gaps",
+      "prompts": [
+        {
+          "role": "receiver",
+          "instructions": "You're an environmental analyst who is helping identify when and where pollution levels peak or drop significantly. Your task is to choose a data broker (sender) who you trust to provide the data your team needs to guide policy decisions concerning pollution sources or behaviors. ",
+          "condensed_instructions": "Show peaks and troughs where pollution is especially high and low.",
+          "is_for_receiver": true
+        },
+        {
+          "role": "sender",
+          "instructions": "You're a data broker selling a high-resolution air-quality dataset. You want to build trust by demonstrating that the dataset contains the information that your potential client (the receiver) needs. But to protect proprietary collection patterns, you cannot expose the exact location of gaps in the data distribution in your visualizations.",
+          "condensed_instructions": "Hide exact location of gaps in the data.",
+          "is_for_receiver": false
+        }
+      ],
+      "signals": [
+        {
+          "name": "isPeak",
+          "role": "receiver",
+          "relevant_fields": ["pollutant_ppb"],
+          "markset": [
+            {
+              "mark": "Area",
+              "heuristic": "Area discloses peaks but depends on the bandwidth."
+            },
+            {
+              "mark": "Bar",
+              "heuristic": "Bar discloses peaks; if bin(), depends on bin size."
+            },
+            {
+              "mark": "Line",
+              "heuristic": "Line discloses peaks but depends on the interpolation."
+            },
+            {
+              "mark": "Point",
+              "heuristic": "Points disclose peaks but can be hard to perceive due to overplotting."
+            },
+            {
+              "mark": "Circle",
+              "heuristic": "Points disclose peaks but can be hard to perceive due to overplotting."
+            },
+            {
+              "mark": "Rect",
+              "heuristic": "If var is encoded as color, depends on color scale."
+            },
+            {
+              "mark": "Tick",
+              "heuristic": "Can disclose peaks but can be hard to perceive due to overplotting."
+            }
+          ]
+        },
+        {
+          "name": "isGap",
+          "role": "sender",
+          "relevant_fields": ["pollutant_ppb"],
+          "markset": [
+            {
+              "mark": "Arc",
+              "heuristic": "If a category is empty, the visualization can hide it but the legend will still disclose it."
+            },
+            {
+              "mark": "Area",
+              "heuristic": "Area can disclose gaps if the line touches the x-axis."
+            },
+            {
+              "mark": "Bar",
+              "heuristic": "If bin(), depends on bin size."
+            },
+            {
+              "mark": "Point",
+              "heuristic": "Points disclose gaps but can be hard to perceive if gap is small or point size is large."
+            },
+            {
+              "mark": "Circle",
+              "heuristic": "Points disclose gaps but can be hard to perceive if gap is small or point size is large."
+            },
+            {
+              "mark": "Line",
+              "heuristic": "Lines disclose gaps only if var is non-empty, ordered, and encoded on the x-axis."
+            },
+            {
+              "mark": "Rect",
+              "heuristic": "Rect can disclose gaps for categorical data."
+            },
+            {
+              "mark": "Tick",
+              "heuristic": "Ticks disclose gaps but can be hard to perceive if gap is small or point size is large."
+            },
+            {
+              "mark": "Trail",
+              "heuristic": "Trail can disclose gaps if var is non-empty, ordered, and encoded on the x-axis."
+            }
+          ]
+        }
+      ],
+      "defaultNotebook": [
+        {
+          "cell_type": "code",
+          "source": [
+            "import pandas as pd",
+            "import altair as alt",
+            "import numpy as np",
+            "alt.data_transformers.disable_max_rows()"
+          ]
+        },
+        {
+          "cell_type": "code",
+          "source": [
+            "df = pd.read_csv('/pag.csv')",
+            "df.head(10)"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Hot Spots and MAUP",
+      "prompts": [
+        {
+          "role": "receiver",
+          "instructions": "You are an analyst working with a tenants' rights group. Your job is to explore how retail stores are spread across the US to get a sense of where saturation is high or low. Your task is to choose a data broker (sender) who you trust to provide the data needed to better understand the patterns you are looking for.",
+          "condensed_instructions": "Show areas where retail saturation is high.",
+          "is_for_receiver": true
+        },
+        {
+          "role": "sender",
+          "instructions": "You are a data broker who maintains a detailed dataset of retail stores, including their locations and counts across different areas of the country. Your job is to share visualizations that show the dataset contains information that your client (the receiver) needs. However, you should not show very fine-grained details (like individual blocks or exact storefront locations) that landlords or large chains could use to raise rents in specific areas.",
+          "condensed_instructions": "Hide specific store locations.",
+          "is_for_receiver": false
+        }
+      ],
+      "signals": [
+        {
+          "name": "isSaturation",
+          "role": "receiver",
+          "relevant_fields": ["longitude", "latitude"],
+          "markset": [
+            {
+              "mark": "Area",
+              "heuristic": "Area discloses saturation but depends on the bandwidth."
+            },
+            {
+              "mark": "Bar",
+              "heuristic": "Bar discloses saturation if bin(); depends on bin size."
+            },
+            {
+              "mark": "Geoshape",
+              "heuristic": "Geoshape discloses saturation only at the level of aggregation."
+            },
+            {
+              "mark": "Line",
+              "heuristic": "Line can disclose saturation but depends on the interpolation."
+            },
+            {
+              "mark": "Point",
+              "heuristic": "Points will disclose saturation but can be hard to perceive due to overplotting or large point size."
+            },
+            {
+              "mark": "Circle",
+              "heuristic": "Points will disclose saturation but can be hard to perceive due to overplotting or large point size."
+            },
+            {
+              "mark": "Rect",
+              "heuristic": "Rect discloses saturation but depends on bin size."
+            },
+            {
+              "mark": "Tick",
+              "heuristic": "Tick can disclose saturation but can be hard to perceive due to overplotting; clearer with transparency or jitter."
+            },
+            {
+              "mark": "Trail",
+              "heuristic": "Trail can disclose saturation if var is encoded as position or width."
+            }
+          ]
+        },
+        {
+          "name": "isIndividualLocation",
+          "role": "sender",
+          "relevant_fields": ["longitude", "latitude"],
+          "markset": [
+            {
+              "mark": "Area",
+              "heuristic": "Area usually hides individual locations but depends on bandwidth."
+            },
+            {
+              "mark": "Bar",
+              "heuristic": "Bar discloses individual locations if one bar corresponds to one record; if bin(), depends on bin size."
+            },
+            {
+              "mark": "Boxplot",
+              "heuristic": "Boxplot hides individual locations by default but discloses if raw points or outlier points are overlaid."
+            },
+            {
+              "mark": "Geoshape",
+              "heuristic": "Geoshape does not disclose locations as it encodes regions rather than coordinates."
+            },
+            {
+              "mark": "Line",
+              "heuristic": "Discloses if raw observations are connected and individual vertices are readable; smoothing or aggregation can hide them."
+            },
+            {
+              "mark": "Point",
+              "heuristic": "Points will disclose individual locations by default but can be hard to perceive if point size is large or due to overplotting."
+            },
+            {
+              "mark": "Circle",
+              "heuristic": "Points will disclose individual locations by default but can be hard to perceive if point size is large or due to overplotting."
+            },
+            {
+              "mark": "Rect",
+              "heuristic": "Rect marks can disclose specific locations if bins are very small, containing a single data point."
+            },
+            {
+              "mark": "Tick",
+              "heuristic": "Ticks can disclose individual locations if each tick corresponds to a separate record and remains visually separable."
+            }
+          ]
+        }
+      ],
+      "defaultNotebook": [
+        {
+          "cell_type": "code",
+          "source": [
+            "import pandas as pd",
+            "import altair as alt",
+            "import json"
+          ]
+        },
+        {
+          "cell_type": "code",
+          "source": [
+            "stores = pd.read_csv('/hsam.csv', dtype={'GEOID': 'string'})",
+            "states_geojson = json.load(open('/states.geojson', 'r'))",
+            "regions_geojson = json.load(open('/regions.geojson', 'r'))",
+            "county_geojson = json.load(open('/counties.geojson', 'r'))",
+            "# the STUSPS column is common in both the stores dataframe and states_geojson",
+            "# the REGIONCE column is common in both the stores dataframe and regions_geojson",
+            "# the GEOID column is common in both the stores dataframe and counties_geojson",
+            "stores.head(10)"
+          ]
+        },
+        {
+          "cell_type": "code",
+          "source": [
+            "# Link to documentation for choropleth maps: https://altair-viz.github.io/gallery/choropleth.html"
+          ]
+        }
+      ]
+    }
+  ]
+}

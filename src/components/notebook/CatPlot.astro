@@ -1,0 +1,585 @@
+---
+import type { NotebookJSON } from "../../lib/models";
+import Window from "../Window.astro";
+
+export const prerender = false;
+
+interface Props {
+  promptCategory: string;
+  notebook: NotebookJSON;
+}
+
+const { notebook, promptCategory } = Astro.props;
+
+const promptCategoryAbbreviatiosn: Record<string, string> = {
+  "Outliers and Individual Points": "oaip",
+  "Peaks and Gaps": "pag",
+  "Hot Spots and MAUP": "hsam",
+};
+---
+
+<Window id="cat_plot" name="Plot" theme="sender">
+  <div class="flow p-5 text-black">
+    <div class="repel">
+      <h3>Notebook</h3>
+      <div class="flex gap-4 items-center">
+        <div id="notebook-status" class="flex gap-2 items-center">
+          <svg
+            class="animate-spin"
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-loader-circle-icon lucide-loader-circle"
+            ><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg
+          >
+          <span> Connecting... </span>
+        </div>
+        <div
+          id="save-btn"
+          class="text-[#838585] btn-sm hover:bg-[#BDEFFD] border-[#BDEFFD] rounded-none border-3 bg-white btn"
+        >
+          SAVE
+        </div>
+      </div>
+    </div>
+    <div class="repel">
+      <p class="md:block hidden">
+        Craft visualizations to answer the receiver's queries.
+      </p>
+    </div>
+    <div>
+      <div
+        data-notebook-id={notebook.id}
+        data-prompt={promptCategoryAbbreviatiosn[promptCategory]}
+        id="notebook"
+        class="flow pointer-events-none"
+      >
+        {
+          notebook.cells.map((cell) => (
+            <div
+              id="cell"
+              data-id={cell.id}
+              data-cell-type={cell.cell_type}
+              data-source={cell.source.join("\n")}
+              class="w-full border-3 z-10 border-[#EEEEEE] rounded-none p-2 group bg-[#FFFFF9]"
+            >
+              <div class="flex gap-4 relative">
+                <button
+                  data-action="run"
+                  class="top-0 btn bg-[#9AD9EB] btn-circle border-0 text-white btn-xs flex items-center justify-center"
+                >
+                  +
+                </button>
+
+                <div
+                  id="cell-editor"
+                  class="w-full flex flex-col-reverse overflow-x-auto"
+                >
+                  <pre id="cell-output" class="text-xs p-1 table table-xs" />
+                </div>
+                <div class="group-hover:flex hidden absolute gap-1 bg-[#E1E1E1] shadow-sm p-2 top-[-25px] left-[calc(100%_-_100px)]">
+                  <button
+                    data-action="move-up"
+                    class="btn btn-square border-0 rounded-none btn-xs flex items-center justify-center"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    data-action="move-down"
+                    class="btn btn-square border-0 rounded-none btn-xs flex items-center justify-center"
+                  >
+                    ↓
+                  </button>
+                  <button
+                    data-action="delete"
+                    class="btn btn-square border-0 bg-red text-white rounded-none btn-xs flex items-center justify-center"
+                  >
+                    X
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+      <div class="w-full flex justify-center gap-2 mt-2">
+        <div
+          id="add-cell-btn"
+          class="text-[#838585] hover:bg-[#BDEFFD] border-[#BDEFFD] rounded-none border-3 bg-white btn btn-sm"
+        >
+          ADD
+        </div>
+      </div>
+    </div>
+    <template id="cell-template">
+      <div class="flex gap-4 relative">
+        <button
+          data-action="run"
+          class="btn bg-[#9AD9EB] btn-circle border-0 text-white btn-xs flex items-center justify-center"
+        >
+          +
+        </button>
+
+        <div
+          id="cell-editor"
+          class="w-full flex flex-col-reverse overflow-x-auto"
+        >
+          <pre id="cell-output" class="text-xs p-1"></pre>
+        </div>
+
+        <div
+          class="group-hover:flex hidden absolute gap-1 bg-[#E1E1E1] shadow-sm p-2 rounded-none top-[-25px] left-[calc(100%_-_100px)]"
+        >
+          <button
+            data-action="move-up"
+            class="btn btn-circle border-0 btn-xs flex items-center justify-center btn-square rounded-none"
+          >
+            ↑
+          </button>
+          <button
+            data-action="move-down"
+            class="btn btn-circle border-0 btn-xs flex rounded-none btn-square items-center justify-center"
+          >
+            ↓
+          </button>
+          <button
+            data-action="delete"
+            class="btn bg-red border-0 text-white btn-square rounded-none btn-xs flex items-center justify-center"
+          >
+            X
+          </button>
+        </div>
+      </div>
+    </template>
+  </div>
+</Window>
+
+<script>
+  import { EditorView, basicSetup } from "codemirror";
+  import { python } from "@codemirror/lang-python";
+  import { pythonLanguage } from "@codemirror/lang-python";
+  import {
+    autocompletion,
+    type CompletionContext,
+    type CompletionResult,
+  } from "@codemirror/autocomplete";
+  import { run, init, getCompletions } from "./worker/";
+  import vegaEmbed from "vega-embed";
+  import { v4 as uuidv4 } from "uuid";
+  import type { Cell } from "../../lib/models";
+  import { tooltips } from "@codemirror/view";
+
+  const NOTEBOOK = document.getElementById("notebook")!;
+  const NOTEBOOK_STATUS = document.getElementById("notebook-status")!;
+  const CELLS = NOTEBOOK.querySelectorAll<HTMLElement>("#cell");
+  const ADD_CELL_BTN = document.getElementById("add-cell-btn")!;
+  const SAVE_BTN = document.getElementById("save-btn")!;
+
+  const NOTEBOOK_ID = +NOTEBOOK.dataset.notebookId!;
+  const PROMPT_CATEGORY = NOTEBOOK.dataset.prompt!;
+
+  pythonLanguage.data.of({
+    autocomplete: pythonCompletions,
+  });
+
+  // Autocompletion configuration
+  let completionTimeout: number | null = null;
+  const DEBOUNCE_MS = 150;
+
+  async function pythonCompletions(
+    context: CompletionContext,
+  ): Promise<CompletionResult | null> {
+    // Match word characters and dots, but also handle attribute access
+    const word = context.matchBefore(/[\w.]+/);
+
+    // Also try to match just the part after the last dot for attribute access
+    const attributeWord = context.matchBefore(/\.?\w*/);
+
+    // Don't show completions if cursor is not at end of word or explicit trigger
+    if (!word && !attributeWord) {
+      return null;
+    }
+
+    // If we have no match and it's not explicit, return null
+    if ((!word || word.from === word.to) && !context.explicit) {
+      return null;
+    }
+
+    // Debounce completion requests
+    return new Promise((resolve) => {
+      if (completionTimeout) {
+        clearTimeout(completionTimeout);
+      }
+
+      completionTimeout = window.setTimeout(async () => {
+        const code = context.state.doc.toString();
+        const pos = context.pos;
+        const line = context.state.doc.lineAt(pos);
+        const lineNumber = line.number - 1; // 0-indexed
+        const column = pos - line.from;
+
+        try {
+          const response = await getCompletions(code, lineNumber, column);
+
+          const options = response.completions.map((c) => {
+            const option: any = {
+              label: c.label,
+              type: c.type || "variable",
+              apply: c.label,
+            };
+
+            if (c.detail && c.detail.trim()) {
+              option.detail = c.detail;
+            }
+
+            return option;
+          });
+
+          // Determine the correct 'from' position
+          // If we're completing after a dot (e.g., 'pd.r'), we want to replace from after the dot
+          const textBefore = context.state.sliceDoc(0, context.pos);
+          const lastDotIndex = textBefore.lastIndexOf(".");
+
+          let fromPos = word ? word.from : context.pos;
+
+          // If there's a dot right before our current position or in our word
+          if (
+            lastDotIndex !== -1 &&
+            lastDotIndex >= (word ? word.from : context.pos) - 1
+          ) {
+            // Start replacement from after the dot
+            fromPos = lastDotIndex + 1;
+          }
+
+          resolve({
+            from: fromPos,
+            options: options,
+          });
+        } catch (error) {
+          console.error("Completion error:", error);
+          resolve(null);
+        }
+      }, DEBOUNCE_MS);
+    });
+  }
+
+  document.addEventListener("dragstart", (event) => {
+    const target = event.target as HTMLElement;
+    const canvas =
+      target.querySelector("canvas") ||
+      ((target.tagName === "CANVAS"
+        ? target
+        : null) as HTMLCanvasElement | null);
+
+    if (canvas && event.dataTransfer) {
+      const dataUrl = canvas.toDataURL("image/png");
+
+      // Find the cell ID from the closest cell container
+      const cellElement = target.closest("[data-id]") as HTMLElement;
+      const cellId = cellElement?.dataset.id || "";
+
+      event.dataTransfer.setData("text/plain", dataUrl);
+      event.dataTransfer.setData("application/cell-id", cellId);
+      event.dataTransfer.effectAllowed = "copy";
+    }
+  });
+
+  document.addEventListener("dragover", (event) => {
+    event.preventDefault();
+  });
+
+  document.addEventListener("drop", (event) => {
+    const target = event.target as HTMLElement;
+    if (target.id === "body") {
+      const previewElement = document.getElementById("image-preview");
+
+      if (previewElement) {
+        event.preventDefault();
+
+        const url = event.dataTransfer?.getData("text/plain");
+
+        if (url) {
+          const img = document.createElement("img");
+          img.src = url;
+          img.style.maxWidth = "200px";
+          img.style.height = "auto";
+
+          previewElement.innerHTML = "";
+          previewElement.appendChild(img);
+
+          img.onload = () => {
+            URL.revokeObjectURL(url);
+          };
+        }
+      }
+    }
+  });
+
+  const CELL_EDITOR_STATE: Record<
+    string,
+    { view: EditorView; outputContainer: HTMLElement }
+  > = {};
+
+  CELLS.forEach((cell) => {
+    addCell(cell);
+  });
+
+  await (async () => {
+    const status = await init(PROMPT_CATEGORY);
+
+    if (status.type === "init" && status.success) {
+      NOTEBOOK_STATUS.innerHTML =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M20 6 9 17l-5-5"/></svg> <span>Connected</span>';
+      NOTEBOOK.classList.remove("pointer-events-none");
+    }
+  })();
+
+  function getCurrentCells(): Cell[] {
+    const cells: Cell[] = [];
+    const cellElements = NOTEBOOK.querySelectorAll<HTMLElement>("#cell");
+
+    cellElements.forEach((cellEl) => {
+      const cellId = cellEl.dataset.id!;
+      const cellType = (cellEl.dataset.cellType || "code") as "code" | "raw";
+      const editorState = CELL_EDITOR_STATE[cellId];
+
+      if (editorState) {
+        const source = editorState.view.state.doc.toString();
+        cells.push({
+          id: cellId,
+          cell_type: cellType,
+          source: source.split("\n"),
+        });
+      }
+    });
+
+    return cells;
+  }
+
+  async function trackChange(
+    changeType: "cell_added" | "cell_deleted" | "cell_reordered" | "save",
+  ) {
+    try {
+      const cells = getCurrentCells();
+
+      await fetch("/api/notebook/change", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notebookId: NOTEBOOK_ID,
+          cells,
+          changeType,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to track change:", error);
+    }
+  }
+
+  async function trackExecution(
+    cellId: string,
+    status: "success" | "error",
+    context: string,
+  ) {
+    try {
+      const cells = getCurrentCells();
+
+      await fetch("/api/notebook/execution", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notebookId: NOTEBOOK_ID,
+          cells,
+          executedCellId: cellId,
+          status,
+          context,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to track execution:", error);
+    }
+  }
+
+  function addCell(cell: HTMLElement) {
+    const cellId = cell.dataset.id!;
+    const source = cell.dataset.source;
+
+    const cellEditor = cell.querySelector<HTMLElement>("#cell-editor")!;
+
+    const view = new EditorView({
+      doc: source,
+      extensions: [
+        basicSetup,
+        python(),
+        autocompletion({
+          override: [pythonCompletions],
+          activateOnTyping: true,
+          maxRenderedOptions: 5,
+          closeOnBlur: true,
+        }),
+        tooltips({ position: "absolute", parent: cell }),
+      ],
+      parent: cellEditor,
+    });
+
+    const cellOutput = cell.querySelector<HTMLElement>("#cell-output")!;
+
+    CELL_EDITOR_STATE[cellId] = {
+      view: view,
+      outputContainer: cellOutput,
+    };
+  }
+
+  NOTEBOOK.addEventListener("click", async (event) => {
+    const target = event.target;
+
+    if (!(target instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    const parent = target.closest<HTMLElement>("#cell")!;
+
+    const cellId = parent.dataset.id;
+
+    if (!cellId) {
+      return;
+    }
+
+    const action = target.dataset.action;
+
+    switch (action) {
+      case "run":
+        target.innerHTML =
+          '<svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-circle-icon lucide-loader-circle"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
+
+        const state = CELL_EDITOR_STATE[cellId].view.state.doc.toString();
+
+        let executionStatus: "success" | "error" = "success";
+        let executionContext = "";
+
+        try {
+          const result = await run(state);
+
+          if (result.type === "run") {
+            if (result && result.output.type === "altair chart") {
+              CELL_EDITOR_STATE[cellId].outputContainer.draggable = true;
+
+              vegaEmbed(
+                CELL_EDITOR_STATE[cellId].outputContainer,
+                result.output.value,
+                { renderer: "canvas" },
+              );
+              executionContext = JSON.stringify({
+                type: "altair chart",
+                hasOutput: true,
+                spec: result.output.value,
+              });
+            } else if (result && result.output.type !== "no output") {
+              CELL_EDITOR_STATE[cellId].outputContainer.innerHTML =
+                result.output.value;
+              executionContext = JSON.stringify({
+                type: result.output.type,
+                hasOutput: true,
+              });
+            } else {
+              CELL_EDITOR_STATE[cellId].outputContainer.innerHTML = "";
+              executionContext = JSON.stringify({
+                type: "no output",
+                hasOutput: false,
+              });
+            }
+          }
+        } catch (error) {
+          executionStatus = "error";
+          executionContext = JSON.stringify({
+            error: {
+              type: error instanceof Error ? error.name : "Error",
+              message: error instanceof Error ? error.message : String(error),
+            },
+          });
+
+          // Display error in output
+          CELL_EDITOR_STATE[cellId].outputContainer.innerHTML =
+            `<span class="text-error">${error instanceof Error ? error.message : String(error)}</span>`;
+        } finally {
+          // Track the execution
+          await trackExecution(cellId, executionStatus, executionContext);
+          target.innerHTML = "+";
+        }
+        break;
+
+      case "delete":
+        const cellToDelete = target.closest("#cell");
+
+        if (cellToDelete) {
+          cellToDelete.remove();
+          delete CELL_EDITOR_STATE[cellId];
+          await trackChange("cell_deleted");
+        }
+        break;
+
+      case "move-up":
+        const cellToMoveUp = target.closest("#cell");
+
+        if (!cellToMoveUp || !cellToMoveUp.parentElement) {
+          return;
+        }
+
+        if (cellToMoveUp.previousElementSibling) {
+          cellToMoveUp.parentElement.insertBefore(
+            cellToMoveUp,
+            cellToMoveUp.previousElementSibling,
+          );
+          await trackChange("cell_reordered");
+        }
+        break;
+
+      case "move-down":
+        const cellToMoveDown = target.closest("#cell");
+
+        if (!cellToMoveDown || !cellToMoveDown.parentElement) {
+          return;
+        }
+
+        if (cellToMoveDown.nextElementSibling) {
+          cellToMoveDown.parentElement.insertBefore(
+            cellToMoveDown.nextElementSibling,
+            cellToMoveDown,
+          );
+          await trackChange("cell_reordered");
+        }
+        break;
+    }
+  });
+
+  ADD_CELL_BTN.addEventListener("click", async () => {
+    const id = uuidv4();
+    const template =
+      document.querySelector<HTMLTemplateElement>("#cell-template")!;
+    const newCell = document.createElement("div");
+    newCell.id = "cell";
+    newCell.classList.value =
+      "w-full border-3 border-[#EEEEEE] rounded-none p-2 group";
+    const cellContent = template.content.cloneNode(true);
+    newCell.appendChild(cellContent);
+    newCell.dataset.id = id;
+    newCell.dataset.cellType = "code";
+    newCell.dataset.source = "";
+    NOTEBOOK.appendChild(newCell);
+    addCell(newCell);
+
+    await trackChange("cell_added");
+  });
+
+  SAVE_BTN.addEventListener("click", async () => {
+    SAVE_BTN.classList.add("loading");
+    await trackChange("save");
+    SAVE_BTN.classList.remove("loading");
+  });
+</script>

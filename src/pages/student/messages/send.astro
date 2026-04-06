@@ -1,0 +1,122 @@
+---
+import z from "zod";
+import { roundService } from "../../../lib/services";
+import type { CreateMessage } from "../../../lib/models";
+import MailPreview from "../../../components/messages/MailPreview.astro";
+import { assertStudent } from "../../../lib/core/utils";
+
+assertStudent(Astro.locals);
+
+export const partial = true;
+export const prerender = false;
+
+if (Astro.request.method !== "POST") {
+  return new Response("Method not allowed", { status: 405 });
+}
+
+const messageSchema = z.object({
+  sender: z.coerce.number(),
+  recipient: z.coerce.number(),
+  subject: z.string().min(1, "Subject is required"),
+  body: z.string().min(1, "Body is required"),
+  visualization: z.instanceof(File).nullable(),
+  round_id: z.coerce.number(),
+  group_id: z.coerce.number().optional(),
+  cell_id: z.string().nullable(),
+});
+
+const formData = await Astro.request.formData();
+const rawData = {
+  sender: formData.get("sender"),
+  recipient: formData.get("recipient"),
+  subject: formData.get("subject"),
+  body: formData.get("body"),
+  visualization: formData.get("visualization"),
+  round_id: formData.get("round_id"),
+  group_id: formData.get("group_id"),
+  cell_id: formData.get("cell_id"),
+};
+
+// Validate with Zod
+const parseResult = messageSchema.safeParse(rawData);
+
+if (!parseResult.success) {
+  console.error("Form validation error:", parseResult.error);
+  return new Response("Invalid form data", { status: 400 });
+}
+
+const data = parseResult.data;
+
+// Process visualization file if present
+let buffer: Buffer<ArrayBuffer> | null = null;
+if (data.visualization) {
+  try {
+    const arrayBuffer = await data.visualization.arrayBuffer();
+    buffer = Buffer.from(arrayBuffer);
+  } catch (error) {
+    console.error("Error processing visualization:", error);
+    return new Response("Failed to process visualization", { status: 500 });
+  }
+}
+
+// Construct message object
+const message: CreateMessage = {
+  user_id: data.sender,
+  recipient_id: data.recipient,
+  subject: data.subject,
+  body: data.body,
+  visualization: buffer,
+  round_id: data.round_id,
+  timestamp: new Date().toISOString(),
+  cell_id: data.cell_id,
+};
+
+// Send message
+if (data.group_id && data.recipient === 0) {
+  const result = roundService.sendMessageToAllGroupMembers(
+    data.group_id,
+    message
+  );
+
+  if (result.isErr()) {
+    console.error("Failed to send message to group:", result.error);
+    return new Response("Failed to send message", { status: 500 });
+  }
+} else {
+  const result = roundService.sendMessage(message);
+
+  if (result.isErr()) {
+    console.error("Failed to send message:", result.error);
+    return new Response("Failed to send message", { status: 500 });
+  }
+}
+
+// Get updated inbox
+const inboxResult = roundService.getInbox(data.sender, data.round_id);
+
+if (inboxResult.isErr()) {
+  console.error("Failed to get inbox:", inboxResult.error);
+  return new Response("Failed to load inbox", { status: 500 });
+}
+
+const inbox = inboxResult.value.inbox;
+---
+
+<ul id="msg-list">
+  {
+    inbox.map((m) => (
+      <MailPreview message={m} isNew={false} isSelected={false} />
+    ))
+  }
+</ul>
+
+<div
+  id="msg-thread"
+  hx-swap-oob="true"
+  style={`${Astro.locals.isReceiver ? "--thumb-color: var(--color-pink);" : ""}`}
+  class="overflow-auto max-h-[700px] scroll-container border-3 border-[#EEEEEE] bg-white"
+>
+  <div class="w-full h-full flex justify-center items-center font-medium p-2">
+    Select a message to read. Nothing is selected.
+  </div>
+</div>
