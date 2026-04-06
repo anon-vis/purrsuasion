@@ -1,6 +1,8 @@
-# Persuasion
+# Purrsuasion
 
-# Setup Guide
+This anonymized repo contains code for the data-communication game discussed in the VIS 2026 submission: _Investigating Ethical Data Communication with Purrsuasion: An Educational Game about Negotiated Data Disclosure_.
+
+# Game Setup Guide
 
 This guide covers what you need to set up and run a game session.
 
