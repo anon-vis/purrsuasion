@@ -268,6 +268,7 @@ Export structure:
   }
 }
 ```
+The full gameplay data, beyond what is afforded by the export, can be explored directly by writing queries against the SQLite database file.
 
 ---
 
